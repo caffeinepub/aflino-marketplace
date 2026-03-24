@@ -1,3 +1,4 @@
+import ProductDetailModal from "@/components/ProductDetailModal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Electronics: "bg-blue-50 text-blue-700 border-blue-100",
@@ -81,7 +81,6 @@ function SidebarFilter({
 
   return (
     <aside className="w-64 flex-shrink-0 bg-gray-50 border-r border-gray-200 rounded-2xl p-5 flex flex-col gap-6 self-start sticky top-24">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold text-gray-800 uppercase tracking-widest">
           Filters
@@ -96,7 +95,6 @@ function SidebarFilter({
         </button>
       </div>
 
-      {/* Price Range */}
       <div className="flex flex-col gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Price Range
@@ -127,7 +125,6 @@ function SidebarFilter({
 
       <div className="h-px bg-gray-200" />
 
-      {/* Categories */}
       <div className="flex flex-col gap-2.5">
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Categories
@@ -159,7 +156,6 @@ function SidebarFilter({
 
       <div className="h-px bg-gray-200" />
 
-      {/* Vendor Rating */}
       <div className="flex flex-col gap-2.5">
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Min Rating
@@ -203,7 +199,6 @@ function SidebarFilter({
 
       <div className="h-px bg-gray-200" />
 
-      {/* Stock Availability */}
       <div className="flex flex-col gap-2.5">
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Availability
@@ -228,16 +223,29 @@ function SidebarFilter({
   );
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ProductCard({
+  product,
+  index,
+  onOpen,
+}: {
+  product: Product;
+  index: number;
+  onOpen: (p: Product) => void;
+}) {
+  const hasVariants = !!product.variants && product.variants.length > 0;
+  const displayPrice = hasVariants
+    ? Math.min(...product.variants!.map((v) => v.price))
+    : product.price;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       data-ocid={`products.item.${index + 1}`}
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group cursor-pointer"
+      onClick={() => onOpen(product)}
     >
-      {/* Product image */}
       <div
         className="h-44 flex items-center justify-center text-4xl relative"
         style={{
@@ -249,10 +257,20 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         {product.category === "Home & Kitchen" && "🏠"}
         {product.category === "Beauty" && "✨"}
         {product.category === "Sports" && "⚽"}
-        {product.stock === 0 && (
+        {product.stock === 0 && !hasVariants && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
               Out of Stock
+            </span>
+          </div>
+        )}
+        {hasVariants && (
+          <div className="absolute top-2 right-2">
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
+              style={{ backgroundColor: "#006AFF" }}
+            >
+              {product.variants!.length} variants
             </span>
           </div>
         )}
@@ -279,20 +297,27 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-gray-900">
-            ₹{product.price.toLocaleString("en-IN")}
-          </span>
+          <div>
+            {hasVariants && (
+              <p className="text-xs text-gray-400 leading-none mb-0.5">From</p>
+            )}
+            <span className="text-lg font-bold text-gray-900">
+              ₹{displayPrice.toLocaleString("en-IN")}
+            </span>
+          </div>
           <Button
             type="button"
             size="sm"
-            disabled={product.stock === 0}
-            className="h-8 px-3 rounded-full text-xs font-semibold text-white border-0 gap-1.5 disabled:opacity-50"
-            style={product.stock > 0 ? { backgroundColor: "#FF1B8D" } : {}}
-            onClick={() => toast.success(`"${product.title}" added to cart!`)}
+            className="h-8 px-3 rounded-full text-xs font-semibold text-white border-0 gap-1.5"
+            style={{ backgroundColor: "#FF1B8D" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(product);
+            }}
             data-ocid={`products.add_to_cart.button.${index + 1}`}
           >
             <ShoppingCart className="w-3 h-3" />
-            Add
+            {hasVariants ? "Options" : "Add"}
           </Button>
         </div>
       </div>
@@ -303,10 +328,15 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 export default function ProductGrid() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const filtered = PRODUCTS.filter((p) => {
+    const effectivePrice = p.variants?.length
+      ? Math.min(...p.variants.map((v) => v.price))
+      : p.price;
     const inPrice =
-      p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1];
+      effectivePrice >= filters.priceRange[0] &&
+      effectivePrice <= filters.priceRange[1];
     const inCat =
       filters.categories.includes("All") ||
       filters.categories.includes(p.category);
@@ -329,7 +359,6 @@ export default function ProductGrid() {
             Browse from our curated selection of top products
           </p>
         </div>
-        {/* Mobile filter toggle */}
         <button
           type="button"
           className="md:hidden flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 bg-white hover:border-[#006AFF] hover:text-[#006AFF] transition-colors"
@@ -342,7 +371,6 @@ export default function ProductGrid() {
       </div>
 
       <div className="flex gap-8">
-        {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <SidebarFilter
             filters={filters}
@@ -351,7 +379,6 @@ export default function ProductGrid() {
           />
         </div>
 
-        {/* Product area */}
         <div className="flex-1 min-w-0">
           <p className="text-sm text-gray-500 mb-4">
             Showing <strong className="text-gray-800">{filtered.length}</strong>{" "}
@@ -385,7 +412,12 @@ export default function ProductGrid() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
               >
                 {filtered.map((product, i) => (
-                  <ProductCard key={product.id} product={product} index={i} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    index={i}
+                    onOpen={setSelectedProduct}
+                  />
                 ))}
               </motion.div>
             )}
@@ -437,6 +469,13 @@ export default function ProductGrid() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        open={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </section>
   );
 }

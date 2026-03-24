@@ -3,6 +3,8 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
+import { CartProvider } from "@/context/CartContext";
+import { OrderTrackingProvider } from "@/context/OrderTrackingContext";
 import { RoleProvider, useRole } from "@/context/RoleContext";
 import { SellerProvider } from "@/context/SellerContext";
 import { WalletProvider } from "@/context/WalletContext";
@@ -47,8 +49,12 @@ export default function App() {
     <RoleProvider>
       <SellerProvider>
         <WalletProvider>
-          <Toaster />
-          <AppContent />
+          <OrderTrackingProvider>
+            <CartProvider>
+              <Toaster />
+              <AppContent />
+            </CartProvider>
+          </OrderTrackingProvider>
         </WalletProvider>
       </SellerProvider>
     </RoleProvider>

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -17,16 +18,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  type OrderStatus,
+  useOrderTracking,
+} from "@/context/OrderTrackingContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
 import {
   AlertCircle,
   BarChart3,
+  ClipboardList,
   Clock,
   LogOut,
   Package,
+  Plus,
   ShoppingBag,
+  Trash2,
   TrendingUp,
   Upload,
   Wallet,
@@ -35,10 +43,19 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-type Tab = "upload" | "wallet";
+type Tab = "upload" | "wallet" | "orders";
 
 interface Props {
   sellerEmail?: string;
+}
+
+interface VariantRow {
+  id: string;
+  size: string;
+  color: string;
+  colorHex: string;
+  price: string;
+  stock: string;
 }
 
 function formatRupee(amount: number) {
@@ -47,6 +64,33 @@ function formatRupee(amount: number) {
     currency: "INR",
     minimumFractionDigits: 2,
   }).format(amount);
+}
+
+const ORDER_STATUSES: OrderStatus[] = [
+  "Order Placed",
+  "Packed",
+  "Shipped",
+  "Out for Delivery",
+  "Delivered",
+];
+
+const statusPillStyle: Record<OrderStatus, string> = {
+  "Order Placed": "bg-yellow-100 text-yellow-700",
+  Packed: "bg-blue-100 text-blue-700",
+  Shipped: "bg-indigo-100 text-indigo-700",
+  "Out for Delivery": "bg-orange-100 text-orange-700",
+  Delivered: "bg-emerald-100 text-emerald-700",
+};
+
+function newVariantRow(): VariantRow {
+  return {
+    id: Math.random().toString(36).slice(2),
+    size: "",
+    color: "",
+    colorHex: "#000000",
+    price: "",
+    stock: "",
+  };
 }
 
 export default function SellerDashboard({
@@ -64,6 +108,7 @@ export default function SellerDashboard({
     getSellerPendingBalance,
     requestPayout,
   } = useWallet();
+  const { orders, updateOrderStatus } = useOrderTracking();
 
   const approved = isApproved(sellerEmail);
   const [activeTab, setActiveTab] = useState<Tab>("upload");
@@ -73,6 +118,10 @@ export default function SellerDashboard({
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [description, setDescription] = useState("");
+  const [variantsEnabled, setVariantsEnabled] = useState(false);
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([
+    newVariantRow(),
+  ]);
 
   const totalEarnings = getSellerEarnings(sellerEmail);
   const pendingBalance = getSellerPendingBalance(sellerEmail);
@@ -86,17 +135,51 @@ export default function SellerDashboard({
     (r) => r.sellerEmail === sellerEmail && r.status === "pending",
   );
 
+  function addVariantRow() {
+    setVariantRows((prev) => [...prev, newVariantRow()]);
+  }
+
+  function removeVariantRow(id: string) {
+    setVariantRows((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  function updateVariantRow(
+    id: string,
+    field: keyof VariantRow,
+    value: string,
+  ) {
+    setVariantRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+    );
+  }
+
   const handleUpload = () => {
-    if (!productName || !category || !price || !stock) {
-      toast.error("Please fill in all required fields");
+    if (!productName || !category) {
+      toast.error("Please fill in Product Title and Category");
       return;
     }
-    toast.success(`Product "${productName}" uploaded successfully!`);
+    if (!variantsEnabled && (!price || !stock)) {
+      toast.error("Please fill in Price and Stock");
+      return;
+    }
+    if (variantsEnabled && variantRows.length === 0) {
+      toast.error("Add at least one variant or disable variants");
+      return;
+    }
+    const variantSummary =
+      variantsEnabled && variantRows.length > 0
+        ? ` with ${variantRows.length} variant${variantRows.length > 1 ? "s" : ""}`
+        : "";
+    toast.success(
+      `Product "${productName}" uploaded successfully${variantSummary}!`,
+    );
     setProductName("");
     setCategory("");
     setPrice("");
     setStock("");
     setDescription("");
+    setVariantsEnabled(false);
+    setVariantRows([newVariantRow()]);
   };
 
   const handlePayoutRequest = () => {
@@ -152,6 +235,19 @@ export default function SellerDashboard({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("orders")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "orders"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="seller.orders.tab"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Orders
+          </button>
+          <button
+            type="button"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 text-sm hover:bg-gray-50 transition-colors"
           >
             <ShoppingBag className="w-4 h-4" />
@@ -192,7 +288,7 @@ export default function SellerDashboard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {activeTab === "upload" ? (
+            {activeTab === "upload" && (
               <>
                 {!approved && (
                   <motion.div
@@ -214,7 +310,7 @@ export default function SellerDashboard({
                   </motion.div>
                 )}
 
-                <div className="max-w-xl">
+                <div className="max-w-2xl">
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">
                     Product Upload
                   </h2>
@@ -268,40 +364,72 @@ export default function SellerDashboard({
                       </Select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Price (₹) <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        placeholder="0.00"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        disabled={!approved}
-                        data-ocid="seller.price.input"
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="price"
+                          className={`text-sm font-medium ${
+                            variantsEnabled ? "text-gray-400" : "text-gray-700"
+                          }`}
+                        >
+                          Price (₹){" "}
+                          {!variantsEnabled && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          placeholder={
+                            variantsEnabled ? "Set per variant" : "0.00"
+                          }
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          disabled={!approved || variantsEnabled}
+                          className={
+                            variantsEnabled ? "bg-gray-50 text-gray-400" : ""
+                          }
+                          data-ocid="seller.price.input"
+                        />
+                        {variantsEnabled && (
+                          <p className="text-xs text-gray-400">
+                            Prices set per variant
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="stock"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Stock (qty) <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="stock"
-                        type="number"
-                        placeholder="e.g. 50"
-                        value={stock}
-                        onChange={(e) => setStock(e.target.value)}
-                        disabled={!approved}
-                        data-ocid="seller.stock.input"
-                      />
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="stock"
+                          className={`text-sm font-medium ${
+                            variantsEnabled ? "text-gray-400" : "text-gray-700"
+                          }`}
+                        >
+                          Stock (qty){" "}
+                          {!variantsEnabled && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </Label>
+                        <Input
+                          id="stock"
+                          type="number"
+                          placeholder={
+                            variantsEnabled ? "Set per variant" : "e.g. 50"
+                          }
+                          value={stock}
+                          onChange={(e) => setStock(e.target.value)}
+                          disabled={!approved || variantsEnabled}
+                          className={
+                            variantsEnabled ? "bg-gray-50 text-gray-400" : ""
+                          }
+                          data-ocid="seller.stock.input"
+                        />
+                        {variantsEnabled && (
+                          <p className="text-xs text-gray-400">
+                            Stock set per variant
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -322,6 +450,163 @@ export default function SellerDashboard({
                       />
                     </div>
 
+                    {/* Variants Section */}
+                    <div className="border-t border-gray-100 pt-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">
+                            Product Variants
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Optional — for products with Size / Color options
+                          </p>
+                        </div>
+                        <Switch
+                          id="variants-toggle"
+                          checked={variantsEnabled}
+                          onCheckedChange={setVariantsEnabled}
+                          disabled={!approved}
+                          className="data-[state=checked]:bg-[#006AFF]"
+                          data-ocid="seller.variants.switch"
+                        />
+                      </div>
+
+                      {variantsEnabled && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-3"
+                        >
+                          {/* Variant Rows */}
+                          {variantRows.map((row, i) => (
+                            <div
+                              key={row.id}
+                              className="grid gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                              style={{
+                                gridTemplateColumns:
+                                  "80px 1fr 32px 90px 80px 32px",
+                              }}
+                              data-ocid={`seller.variants.item.${i + 1}`}
+                            >
+                              {/* Size */}
+                              <Input
+                                placeholder="Size"
+                                value={row.size}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "size",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs"
+                                data-ocid="seller.variant_size.input"
+                              />
+                              {/* Color Name */}
+                              <Input
+                                placeholder="Color name"
+                                value={row.color}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "color",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs"
+                                data-ocid="seller.variant_color.input"
+                              />
+                              {/* Color Picker */}
+                              <input
+                                type="color"
+                                value={row.colorHex}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "colorHex",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-8 h-8 rounded cursor-pointer border border-gray-200 p-0.5"
+                                title="Pick color"
+                              />
+                              {/* Price */}
+                              <Input
+                                type="number"
+                                placeholder="₹ Price"
+                                value={row.price}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "price",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs"
+                                data-ocid="seller.variant_price.input"
+                              />
+                              {/* Stock */}
+                              <Input
+                                type="number"
+                                placeholder="Stock"
+                                value={row.stock}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "stock",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs"
+                                data-ocid="seller.variant_stock.input"
+                              />
+                              {/* Remove */}
+                              <button
+                                type="button"
+                                onClick={() => removeVariantRow(row.id)}
+                                className="h-8 w-8 flex items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                data-ocid={`seller.variants.delete_button.${i + 1}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* Column Labels */}
+                          {variantRows.length > 0 && (
+                            <div
+                              className="grid gap-2 px-3 -mt-1"
+                              style={{
+                                gridTemplateColumns:
+                                  "80px 1fr 32px 90px 80px 32px",
+                              }}
+                            >
+                              <p className="text-xs text-gray-400">Size</p>
+                              <p className="text-xs text-gray-400">Color</p>
+                              <p className="text-xs text-gray-400">Hex</p>
+                              <p className="text-xs text-gray-400">Price (₹)</p>
+                              <p className="text-xs text-gray-400">Stock</p>
+                              <span />
+                            </div>
+                          )}
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addVariantRow}
+                            className="gap-1.5 text-xs border-dashed"
+                            style={{ borderColor: "#006AFF", color: "#006AFF" }}
+                            data-ocid="seller.variants.add_button"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Add Variant
+                          </Button>
+                        </motion.div>
+                      )}
+                    </div>
+
                     <Button
                       type="button"
                       onClick={handleUpload}
@@ -338,8 +623,9 @@ export default function SellerDashboard({
                   </div>
                 </div>
               </>
-            ) : (
-              /* Wallet & Earnings Tab */
+            )}
+
+            {activeTab === "wallet" && (
               <div className="max-w-4xl">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-2xl font-bold text-gray-900">
@@ -353,7 +639,6 @@ export default function SellerDashboard({
                   Track your earnings and manage payouts
                 </p>
 
-                {/* Stats Row */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
                     <div
@@ -393,7 +678,6 @@ export default function SellerDashboard({
                   </div>
                 </div>
 
-                {/* Commission Info */}
                 <div className="mb-6 flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-4 py-2.5">
                   <span className="font-medium text-gray-600">
                     Platform commission: {commissionRate}%
@@ -404,7 +688,6 @@ export default function SellerDashboard({
                   </span>
                 </div>
 
-                {/* Payout Request Section */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
                   <h3 className="text-base font-semibold text-gray-800 mb-3">
                     Request Payout
@@ -442,7 +725,6 @@ export default function SellerDashboard({
                   </div>
                 </div>
 
-                {/* Payout History */}
                 {sellerHistory.length > 0 && (
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
                     <div className="px-6 py-4 border-b border-gray-100">
@@ -492,7 +774,6 @@ export default function SellerDashboard({
                   </div>
                 )}
 
-                {/* Earnings Breakdown */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-100">
                     <h3 className="text-base font-semibold text-gray-800">
@@ -565,6 +846,107 @@ export default function SellerDashboard({
                             </TableRow>
                           );
                         })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "orders" && (
+              <div className="max-w-4xl">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                  Order Management
+                </h2>
+                <p className="text-gray-500 text-sm mb-6">
+                  Update order statuses for your customers
+                </p>
+
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  {orders.length === 0 ? (
+                    <div
+                      className="p-12 text-center"
+                      data-ocid="seller.orders.empty_state"
+                    >
+                      <p className="text-gray-400 text-sm">No orders yet.</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-semibold text-gray-700">
+                            Order ID
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Product
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Amount
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Current Status
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Update Status
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders.map((order, i) => (
+                          <TableRow
+                            key={order.id}
+                            data-ocid={`seller.orders.item.${i + 1}`}
+                          >
+                            <TableCell className="font-mono text-xs text-gray-500">
+                              {order.id}
+                            </TableCell>
+                            <TableCell className="font-medium text-gray-800 max-w-[200px]">
+                              <span className="line-clamp-2">
+                                {order.product}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-semibold text-gray-700">
+                              {order.amount}
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  statusPillStyle[order.status]
+                                }`}
+                              >
+                                {order.status}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={order.status}
+                                onValueChange={(val) => {
+                                  updateOrderStatus(
+                                    order.id,
+                                    val as OrderStatus,
+                                  );
+                                  toast.success(
+                                    `Order ${order.id} updated to "${val}"`,
+                                  );
+                                }}
+                              >
+                                <SelectTrigger
+                                  className="w-44 text-xs"
+                                  data-ocid={`seller.orders.select.${i + 1}`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ORDER_STATUSES.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                      {s}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   )}

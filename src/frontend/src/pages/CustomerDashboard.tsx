@@ -1,46 +1,99 @@
 import { Button } from "@/components/ui/button";
+import {
+  type OrderStatus,
+  useOrderTracking,
+} from "@/context/OrderTrackingContext";
 import { useRole } from "@/context/RoleContext";
-import { Heart, LogOut, Package, ShoppingBag, Truck } from "lucide-react";
+import {
+  CheckCircle,
+  Heart,
+  LogOut,
+  MapPin,
+  Package,
+  ShoppingBag,
+  ShoppingCart,
+  Truck,
+} from "lucide-react";
 import { motion } from "motion/react";
 
-const orders = [
-  {
-    id: "ORD-10482",
-    product: "Wireless Bluetooth Headphones",
-    date: "Mar 18, 2026",
-    status: "Delivered",
-    amount: "₹2,499",
-  },
-  {
-    id: "ORD-10391",
-    product: "Men's Running Shoes – Size 42",
-    date: "Mar 12, 2026",
-    status: "In Transit",
-    amount: "₹3,199",
-  },
-  {
-    id: "ORD-10267",
-    product: "Stainless Steel Water Bottle 1L",
-    date: "Mar 5, 2026",
-    status: "Processing",
-    amount: "₹649",
-  },
+const STEPS: { status: OrderStatus; label: string; icon: React.ElementType }[] =
+  [
+    { status: "Order Placed", label: "Order Placed", icon: ShoppingCart },
+    { status: "Packed", label: "Packed", icon: Package },
+    { status: "Shipped", label: "Shipped", icon: Truck },
+    { status: "Out for Delivery", label: "Out for Delivery", icon: MapPin },
+    { status: "Delivered", label: "Delivered", icon: CheckCircle },
+  ];
+
+const STATUS_ORDER: OrderStatus[] = [
+  "Order Placed",
+  "Packed",
+  "Shipped",
+  "Out for Delivery",
+  "Delivered",
 ];
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  Delivered: {
-    label: "Delivered",
-    className: "bg-emerald-100 text-emerald-700",
-  },
-  "In Transit": { label: "In Transit", className: "bg-blue-100 text-blue-700" },
-  Processing: {
-    label: "Processing",
-    className: "bg-yellow-100 text-yellow-700",
-  },
-};
+function getStepIndex(status: OrderStatus) {
+  return STATUS_ORDER.indexOf(status);
+}
+
+function OrderTimeline({ status }: { status: OrderStatus }) {
+  const activeIndex = getStepIndex(status);
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="flex items-start justify-between gap-1">
+        {STEPS.map((step, i) => {
+          const isCompleted = i <= activeIndex;
+          const isLast = i === STEPS.length - 1;
+          const Icon = step.icon;
+
+          return (
+            <div key={step.status} className="flex items-center flex-1">
+              {/* Step node */}
+              <div className="flex flex-col items-center gap-1.5 min-w-[52px]">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                  style={{
+                    backgroundColor: isCompleted ? "#FF1B8D" : "#F3F4F6",
+                  }}
+                >
+                  <Icon
+                    className="w-4 h-4"
+                    style={{ color: isCompleted ? "#fff" : "#9CA3AF" }}
+                  />
+                </div>
+                <span
+                  className="text-[10px] font-medium text-center leading-tight"
+                  style={{
+                    color: isCompleted ? "#FF1B8D" : "#9CA3AF",
+                    fontWeight: isCompleted ? 600 : 400,
+                  }}
+                >
+                  {step.label}
+                </span>
+              </div>
+
+              {/* Connector */}
+              {!isLast && (
+                <div
+                  className="h-0.5 flex-1 mx-1 rounded-full transition-all"
+                  style={{
+                    backgroundColor: i < activeIndex ? "#FF1B8D" : "#E5E7EB",
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function CustomerDashboard() {
   const { logout } = useRole();
+  const { orders } = useOrderTracking();
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -56,7 +109,8 @@ export default function CustomerDashboard() {
         <nav className="flex-1 p-4">
           <button
             type="button"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-pink-50 font-medium text-sm"
+            style={{ color: "#FF1B8D" }}
             data-ocid="customer.my_orders.tab"
           >
             <Package className="w-4 h-4" />
@@ -117,34 +171,37 @@ export default function CustomerDashboard() {
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.25, delay: i * 0.07 }}
-                  className="bg-white rounded-xl border border-gray-200 shadow-xs p-5 flex items-center justify-between gap-4"
+                  className="bg-white rounded-xl border border-gray-200 shadow-xs p-5"
                   data-ocid={`orders.item.${i + 1}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Truck className="w-5 h-5 text-gray-400" />
+                  {/* Order header row */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "#FFF0F6" }}
+                      >
+                        <Truck
+                          className="w-5 h-5"
+                          style={{ color: "#FF1B8D" }}
+                        />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-800 text-sm">
+                          {order.product}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {order.id} &middot; {order.date}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-800 text-sm">
-                        {order.product}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {order.id} &middot; {order.date}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    <span className="font-semibold text-gray-700 text-sm">
+                    <span className="font-semibold text-gray-700 text-sm flex-shrink-0">
                       {order.amount}
                     </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        statusConfig[order.status].className
-                      }`}
-                    >
-                      {statusConfig[order.status].label}
-                    </span>
                   </div>
+
+                  {/* Tracking timeline */}
+                  <OrderTimeline status={order.status} />
                 </motion.div>
               ))}
             </div>
