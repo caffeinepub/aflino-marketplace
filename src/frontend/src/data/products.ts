@@ -261,6 +261,49 @@ export const PRODUCTS: Product[] = [
     stock: 35,
     rating: 4.4,
   },
+  {
+    id: 11,
+    title: "ProMax Smartphone 5G",
+    seller: "TechZone Store",
+    category: "Electronics",
+    price: 10000,
+    stock: 50,
+    rating: 4.6,
+    variants: [
+      {
+        id: "v11-1",
+        size: "4GB+64GB",
+        color: "Midnight Black",
+        colorHex: "#1C1C1E",
+        price: 10000,
+        stock: 20,
+      },
+      {
+        id: "v11-2",
+        size: "4GB+64GB",
+        color: "Space Silver",
+        colorHex: "#C0C0C0",
+        price: 10500,
+        stock: 15,
+      },
+      {
+        id: "v11-3",
+        size: "8GB+256GB",
+        color: "Midnight Black",
+        colorHex: "#1C1C1E",
+        price: 15000,
+        stock: 10,
+      },
+      {
+        id: "v11-4",
+        size: "8GB+256GB",
+        color: "Space Silver",
+        colorHex: "#C0C0C0",
+        price: 15500,
+        stock: 8,
+      },
+    ],
+  },
 ];
 
 export const CATEGORIES = [
