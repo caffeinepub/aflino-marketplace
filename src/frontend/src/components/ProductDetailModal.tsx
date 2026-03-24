@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +7,13 @@ import {
 } from "@/components/ui/dialog";
 import { useCart } from "@/context/CartContext";
 import type { Product, ProductVariant } from "@/data/products";
-import { ChevronLeft, ChevronRight, ShoppingCart, Star } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ShoppingCart,
+  Star,
+  Zap,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -22,6 +27,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   Beauty: "bg-purple-50 text-purple-700 border-purple-100",
   Sports: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
+
+function isSpecSize(size: string): boolean {
+  return (
+    size.includes("+") ||
+    size.toLowerCase().includes("gb") ||
+    size.toLowerCase().includes("tb") ||
+    size.toLowerCase().includes("inch") ||
+    size.includes('"') ||
+    size.length > 5
+  );
+}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -225,6 +241,26 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
       : product!.price;
   }
 
+  // Price for a color (cheapest variant of that color)
+  function priceForColor(color: string): number {
+    if (!hasVariants) return product!.price;
+    const candidates = product!.variants!.filter((v) => v.color === color);
+    return candidates.length > 0
+      ? Math.min(...candidates.map((v) => v.price))
+      : product!.price;
+  }
+
+  // Check if sizes map to different prices (if so, show price in size box for all)
+  function sizesHaveDifferentPrices(): boolean {
+    if (!hasVariants || uniqueSizes.length === 0) return false;
+    const prices = uniqueSizes.map((s) => priceForSize(s));
+    return new Set(prices).size > 1;
+  }
+
+  // Show price in size box if spec-based OR if sizes have different prices
+  const showPriceInSizeBox =
+    isSpecSize(uniqueSizes[0] ?? "") || sizesHaveDifferentPrices();
+
   const selectedVariant: ProductVariant | null =
     hasVariants && selectedSize && selectedColor
       ? (product.variants!.find(
@@ -289,10 +325,12 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
             ? "✨"
             : "📦";
 
-  // Is a size label long (like "4GB+64GB")? Use rounded-xl instead of circle
-  function isSizeLong(size: string) {
-    return size.length > 4;
-  }
+  // Left button label
+  const leftLabel = isOutOfStock
+    ? "Out of Stock"
+    : hasVariants && !selectedVariant
+      ? "Select Options"
+      : "Add to Cart";
 
   return (
     <>
@@ -371,6 +409,7 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                     const isWhite =
                       variant.colorHex.toUpperCase() === "#FFFFFF" ||
                       variant.colorHex.toUpperCase() === "#F5F5F0";
+                    const colorPrice = priceForColor(variant.color);
                     return (
                       <button
                         key={variant.color}
@@ -393,9 +432,9 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
-                          gap: 5,
-                          padding: "6px 10px",
-                          borderRadius: 12,
+                          gap: 4,
+                          padding: "8px 12px",
+                          borderRadius: 10,
                           border: isSelected
                             ? `3px solid ${AFLINO_BLUE}`
                             : "1px solid #e5e7eb",
@@ -406,17 +445,18 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                           cursor: "pointer",
                           flexShrink: 0,
                           transition: "all 0.15s ease",
-                          minWidth: 52,
+                          minWidth: 64,
                         }}
                       >
                         {/* Colored dot */}
                         <div
                           style={{
-                            width: 30,
-                            height: 30,
+                            width: 36,
+                            height: 36,
                             borderRadius: "50%",
                             backgroundColor: variant.colorHex,
                             border: isWhite ? "1.5px solid #d1d5db" : "none",
+                            flexShrink: 0,
                           }}
                         />
                         {/* Color name */}
@@ -435,6 +475,19 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                         >
                           {variant.color}
                         </span>
+                        {/* Price below color name */}
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isSelected ? AFLINO_BLUE : "#374151",
+                            whiteSpace: "nowrap",
+                            lineHeight: 1.2,
+                            textAlign: "center",
+                          }}
+                        >
+                          ₹{colorPrice.toLocaleString("en-IN")}
+                        </span>
                       </button>
                     );
                   })}
@@ -449,7 +502,7 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                   {sizesForColor.map((size) => {
                     const isSelected = selectedSize === size;
                     const sizePrice = priceForSize(size);
-                    const long = isSizeLong(size);
+                    const spec = isSpecSize(size);
                     return (
                       <button
                         key={size}
@@ -461,43 +514,51 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
                           flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 3,
-                          padding: long ? "8px 12px" : "8px 10px",
-                          borderRadius: long ? 12 : 50,
+                          gap: spec ? 3 : 0,
+                          padding: spec ? "10px 14px" : "0",
+                          // Circular for simple sizes, rectangular for spec sizes
+                          width: spec ? undefined : 52,
+                          height: spec ? undefined : 52,
+                          minWidth: spec ? 90 : undefined,
+                          borderRadius: spec ? 12 : "50%",
                           border: isSelected
                             ? `3px solid ${AFLINO_BLUE}`
-                            : "1px solid #e5e7eb",
+                            : "1.5px solid #e5e7eb",
                           boxShadow: isSelected
                             ? "0 0 0 2px rgba(0,106,255,0.18)"
-                            : "none",
+                            : "0 1px 3px rgba(0,0,0,0.06)",
                           background: "#fff",
                           cursor: "pointer",
                           flexShrink: 0,
-                          minWidth: long ? 80 : 56,
                           transition: "all 0.15s ease",
                         }}
                       >
                         <span
                           style={{
-                            fontSize: long ? 11 : 13,
+                            fontSize: spec ? 11 : 13,
                             fontWeight: 700,
                             color: isSelected ? AFLINO_BLUE : "#1f2937",
                             whiteSpace: "nowrap",
                             lineHeight: 1.2,
+                            textAlign: "center",
                           }}
                         >
                           {size}
                         </span>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            color: isSelected ? AFLINO_BLUE : "#6b7280",
-                            fontWeight: 500,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          ₹{sizePrice.toLocaleString("en-IN")}
-                        </span>
+                        {/* Show price only for spec sizes */}
+                        {(spec || showPriceInSizeBox) && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              color: isSelected ? AFLINO_BLUE : "#6b7280",
+                              fontWeight: 500,
+                              whiteSpace: "nowrap",
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            ₹{sizePrice.toLocaleString("en-IN")}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -538,24 +599,64 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
               </div>
             </div>
 
-            {/* CTA */}
-            <Button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!canAddToCart}
-              className="w-full gap-2 text-white font-semibold h-11 rounded-xl text-base disabled:opacity-50"
-              style={{
-                backgroundColor: canAddToCart ? AFLINO_PINK : undefined,
-              }}
-              data-ocid="product.add_to_cart.primary_button"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {hasVariants && !selectedVariant
-                ? "Select Options"
-                : isOutOfStock
-                  ? "Out of Stock"
-                  : "Add to Cart"}
-            </Button>
+            {/* Dual CTA Buttons */}
+            <div className="flex gap-2 w-full">
+              {/* Left: Add to Cart — Pink */}
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                data-ocid="product.add_to_cart.primary_button"
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  backgroundColor: canAddToCart ? AFLINO_PINK : "#e5e7eb",
+                  color: "#fff",
+                  border: "none",
+                  cursor: canAddToCart ? "pointer" : "not-allowed",
+                  fontWeight: 600,
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  opacity: canAddToCart ? 1 : 0.5,
+                  transition: "opacity 0.15s ease, background-color 0.15s ease",
+                }}
+              >
+                <ShoppingCart size={18} />
+                {leftLabel}
+              </button>
+
+              {/* Right: Buy Now — Blue */}
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                data-ocid="product.buy_now.primary_button"
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  backgroundColor: canAddToCart ? AFLINO_BLUE : "#e5e7eb",
+                  color: "#fff",
+                  border: "none",
+                  cursor: canAddToCart ? "pointer" : "not-allowed",
+                  fontWeight: 600,
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  opacity: canAddToCart ? 1 : 0.5,
+                  transition: "opacity 0.15s ease, background-color 0.15s ease",
+                }}
+              >
+                <Zap size={18} />
+                Buy Now
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

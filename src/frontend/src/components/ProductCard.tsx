@@ -69,7 +69,12 @@ export default function ProductCard({
           {stars.map((i) => (
             <Star
               key={`star-${i}`}
-              className={`w-3.5 h-3.5 ${i < Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+              className="w-3.5 h-3.5"
+              style={
+                i < Math.floor(product.rating)
+                  ? { fill: "#006AFF", color: "#006AFF" }
+                  : { fill: "none", color: "#e5e7eb" }
+              }
             />
           ))}
           <span className="text-xs text-gray-400 ml-1">

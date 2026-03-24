@@ -11,6 +11,7 @@ import { WalletProvider } from "@/context/WalletContext";
 import AdminDashboard from "@/pages/AdminDashboard";
 import CustomerDashboard from "@/pages/CustomerDashboard";
 import LoginPage from "@/pages/LoginPage";
+import ProductDetailPage from "@/pages/ProductDetailPage";
 import SellerDashboard from "@/pages/SellerDashboard";
 import SellerRegistrationPage from "@/pages/SellerRegistrationPage";
 import { useState } from "react";
@@ -20,6 +21,7 @@ type View = "home" | "login" | "seller-register";
 function AppContent() {
   const { role } = useRole();
   const [view, setView] = useState<View>("home");
+  const [currentProductId, setCurrentProductId] = useState<number | null>(null);
 
   if (role === "admin") return <AdminDashboard />;
   if (role === "seller") return <SellerDashboard />;
@@ -29,6 +31,25 @@ function AppContent() {
   if (view === "seller-register")
     return <SellerRegistrationPage onBack={() => setView("home")} />;
 
+  if (currentProductId !== null) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+        />
+        <main className="pt-[72px]">
+          <ProductDetailPage
+            productId={currentProductId}
+            onBack={() => setCurrentProductId(null)}
+            onNavigateToProduct={(id) => setCurrentProductId(id)}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Header
@@ -37,7 +58,7 @@ function AppContent() {
       />
       <main className="pt-[72px]">
         <Hero onShopClick={() => setView("login")} />
-        <ProductGrid />
+        <ProductGrid onViewProduct={(id) => setCurrentProductId(id)} />
       </main>
       <Footer />
     </div>

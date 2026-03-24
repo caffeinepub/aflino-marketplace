@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORIES, PRODUCTS, type Product } from "@/data/products";
+import { addToHistory } from "@/utils/browsingHistory";
 import {
   PackageX,
   ShoppingCart,
@@ -317,7 +318,7 @@ function ProductCard({
             data-ocid={`products.add_to_cart.button.${index + 1}`}
           >
             <ShoppingCart className="w-3 h-3" />
-            {hasVariants ? "Options" : "Add"}
+            {hasVariants ? "Options" : "View"}
           </Button>
         </div>
       </div>
@@ -325,10 +326,23 @@ function ProductCard({
   );
 }
 
-export default function ProductGrid() {
+interface ProductGridProps {
+  onViewProduct?: (id: number) => void;
+}
+
+export default function ProductGrid({ onViewProduct }: ProductGridProps) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  function handleOpen(product: Product) {
+    addToHistory(product.id);
+    if (onViewProduct) {
+      onViewProduct(product.id);
+    } else {
+      setSelectedProduct(product);
+    }
+  }
 
   const filtered = PRODUCTS.filter((p) => {
     const effectivePrice = p.variants?.length
@@ -416,7 +430,7 @@ export default function ProductGrid() {
                     key={product.id}
                     product={product}
                     index={i}
-                    onOpen={setSelectedProduct}
+                    onOpen={handleOpen}
                   />
                 ))}
               </motion.div>
@@ -470,12 +484,14 @@ export default function ProductGrid() {
         )}
       </AnimatePresence>
 
-      {/* Product Detail Modal */}
-      <ProductDetailModal
-        product={selectedProduct}
-        open={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-      />
+      {/* Product Detail Modal — fallback when onViewProduct not provided */}
+      {!onViewProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          open={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </section>
   );
 }

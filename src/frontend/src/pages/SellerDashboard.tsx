@@ -154,6 +154,10 @@ export default function SellerDashboard({
   }
 
   const handleUpload = () => {
+    if (productName.length > 110) {
+      toast.error("Product title must be 110 characters or less");
+      return;
+    }
     if (!productName || !category) {
       toast.error("Please fill in Product Title and Category");
       return;
@@ -332,8 +336,18 @@ export default function SellerDashboard({
                         value={productName}
                         onChange={(e) => setProductName(e.target.value)}
                         disabled={!approved}
+                        maxLength={110}
                         data-ocid="seller.product_name.input"
                       />
+                      <p
+                        className="text-xs text-right"
+                        style={{
+                          color:
+                            productName.length > 100 ? "#ef4444" : "#9ca3af",
+                        }}
+                      >
+                        {productName.length}/110
+                      </p>
                     </div>
 
                     <div className="space-y-1.5">
