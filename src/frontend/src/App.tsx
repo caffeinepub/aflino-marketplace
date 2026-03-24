@@ -4,7 +4,9 @@ import Hero from "@/components/Hero";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/CartContext";
+import { HomepageManagerProvider } from "@/context/HomepageManagerContext";
 import { OrderTrackingProvider } from "@/context/OrderTrackingContext";
+import { ProductProvider } from "@/context/ProductContext";
 import { RoleProvider, useRole } from "@/context/RoleContext";
 import { SellerProvider } from "@/context/SellerContext";
 import { WalletProvider } from "@/context/WalletContext";
@@ -12,11 +14,15 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import CustomerDashboard from "@/pages/CustomerDashboard";
 import LoginPage from "@/pages/LoginPage";
 import ProductDetailPage from "@/pages/ProductDetailPage";
+import RecentlyViewedPage from "@/pages/RecentlyViewedPage";
 import SellerDashboard from "@/pages/SellerDashboard";
 import SellerRegistrationPage from "@/pages/SellerRegistrationPage";
 import { useState } from "react";
 
-type View = "home" | "login" | "seller-register";
+type View = "home" | "login" | "seller-register" | "history";
+
+// Header is 2 rows: ~52px top bar + ~46px search = 98px
+const HEADER_HEIGHT = "pt-[98px]";
 
 function AppContent() {
   const { role } = useRole();
@@ -31,6 +37,26 @@ function AppContent() {
   if (view === "seller-register")
     return <SellerRegistrationPage onBack={() => setView("home")} />;
 
+  if (view === "history")
+    return (
+      <div className="min-h-screen bg-white">
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <RecentlyViewedPage
+            onBack={() => setView("home")}
+            onViewProduct={(id) => {
+              setView("home");
+              setCurrentProductId(id);
+            }}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+
   if (currentProductId !== null) {
     return (
       <div className="min-h-screen bg-white">
@@ -38,7 +64,7 @@ function AppContent() {
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
         />
-        <main className="pt-[72px]">
+        <main className={HEADER_HEIGHT}>
           <ProductDetailPage
             productId={currentProductId}
             onBack={() => setCurrentProductId(null)}
@@ -56,8 +82,12 @@ function AppContent() {
         onLoginClick={() => setView("login")}
         onRegisterClick={() => setView("seller-register")}
       />
-      <main className="pt-[72px]">
-        <Hero onShopClick={() => setView("login")} />
+      <main className={HEADER_HEIGHT}>
+        <Hero
+          onShopClick={() => setView("login")}
+          onViewAll={() => setView("history")}
+          onViewProduct={(id) => setCurrentProductId(id)}
+        />
         <ProductGrid onViewProduct={(id) => setCurrentProductId(id)} />
       </main>
       <Footer />
@@ -67,17 +97,21 @@ function AppContent() {
 
 export default function App() {
   return (
-    <RoleProvider>
-      <SellerProvider>
-        <WalletProvider>
-          <OrderTrackingProvider>
-            <CartProvider>
-              <Toaster />
-              <AppContent />
-            </CartProvider>
-          </OrderTrackingProvider>
-        </WalletProvider>
-      </SellerProvider>
-    </RoleProvider>
+    <HomepageManagerProvider>
+      <RoleProvider>
+        <SellerProvider>
+          <WalletProvider>
+            <OrderTrackingProvider>
+              <CartProvider>
+                <ProductProvider>
+                  <Toaster />
+                  <AppContent />
+                </ProductProvider>
+              </CartProvider>
+            </OrderTrackingProvider>
+          </WalletProvider>
+        </SellerProvider>
+      </RoleProvider>
+    </HomepageManagerProvider>
   );
 }

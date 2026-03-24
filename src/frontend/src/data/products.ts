@@ -18,6 +18,7 @@ export interface Product {
   description?: string;
   specifications?: Record<string, string>;
   variants?: ProductVariant[];
+  images?: string[];
 }
 
 export const PRODUCTS: Product[] = [
@@ -40,6 +41,11 @@ export const PRODUCTS: Product[] = [
       Weight: "250g",
       "Noise Cancellation": "Active (ANC)",
     },
+    images: [
+      "https://picsum.photos/seed/headphone1/400/400",
+      "https://picsum.photos/seed/headphone2/400/400",
+      "https://picsum.photos/seed/headphone3/400/400",
+    ],
     variants: [
       {
         id: "v1-1",
@@ -85,6 +91,10 @@ export const PRODUCTS: Product[] = [
     rating: 4.2,
     description:
       "Intelligent LED desk lamp with touch controls, 5 color temperatures, and 10 brightness levels. Features a USB charging port, auto-dimming sensor, and a flexible gooseneck arm. Perfect for studying, reading, or working late nights with eye-care technology that reduces strain.",
+    images: [
+      "https://picsum.photos/seed/desklamp1/400/400",
+      "https://picsum.photos/seed/desklamp2/400/400",
+    ],
   },
   {
     id: 3,
@@ -96,6 +106,10 @@ export const PRODUCTS: Product[] = [
     rating: 4.0,
     description:
       "Compact 7-in-1 USB-C hub with 4K HDMI output, 100W Power Delivery, SD/microSD card reader, and 3 USB-A 3.0 ports. Plug-and-play with no drivers required. Compatible with all USB-C laptops including MacBook, Dell XPS, and Surface Pro.",
+    images: [
+      "https://picsum.photos/seed/usbhub1/400/400",
+      "https://picsum.photos/seed/usbhub2/400/400",
+    ],
   },
   {
     id: 4,
@@ -107,6 +121,11 @@ export const PRODUCTS: Product[] = [
     rating: 4.7,
     description:
       "TKL mechanical keyboard with Cherry MX Blue switches for a satisfying tactile click. Full per-key RGB backlighting with 20+ lighting effects. Aircraft-grade aluminum top plate, double-shot PBT keycaps, and N-key rollover for accurate input. Compatible with Windows and Mac.",
+    images: [
+      "https://picsum.photos/seed/keyboard1/400/400",
+      "https://picsum.photos/seed/keyboard2/400/400",
+      "https://picsum.photos/seed/keyboard3/400/400",
+    ],
   },
   {
     id: 5,
@@ -126,6 +145,12 @@ export const PRODUCTS: Product[] = [
       Care: "Machine Wash Cold",
       Closure: "Button Down",
     },
+    images: [
+      "https://picsum.photos/seed/linenshirt1/400/400",
+      "https://picsum.photos/seed/linenshirt2/400/400",
+      "https://picsum.photos/seed/linenshirt3/400/400",
+      "https://picsum.photos/seed/linenshirt4/400/400",
+    ],
     variants: [
       {
         id: "v5-1",
@@ -179,6 +204,11 @@ export const PRODUCTS: Product[] = [
     rating: 4.3,
     description:
       "Elegant floral maxi dress perfect for summer outings, beach days, or casual get-togethers. Made from lightweight chiffon fabric with a flattering A-line silhouette. Features a smocked waist, adjustable spaghetti straps, and a flowing skirt that falls to the ankle. Available in multiple vibrant floral prints.",
+    images: [
+      "https://picsum.photos/seed/maxis1/400/400",
+      "https://picsum.photos/seed/maxis2/400/400",
+      "https://picsum.photos/seed/maxis3/400/400",
+    ],
     variants: [
       {
         id: "v6-1",
@@ -224,6 +254,11 @@ export const PRODUCTS: Product[] = [
     rating: 4.1,
     description:
       "Classic canvas sneakers with a timeless low-top silhouette. Features a vulcanized rubber sole for durability, a cushioned insole for all-day comfort, and a reinforced toe cap. Available in multiple colors to match any casual outfit. Suitable for men and women.",
+    images: [
+      "https://picsum.photos/seed/sneaker1/400/400",
+      "https://picsum.photos/seed/sneaker2/400/400",
+      "https://picsum.photos/seed/sneaker3/400/400",
+    ],
     variants: [
       {
         id: "v7-1",
@@ -277,6 +312,10 @@ export const PRODUCTS: Product[] = [
     rating: 4.6,
     description:
       "Elegant 6-piece ceramic dinner set with a minimalist design, perfect for everyday dining or special occasions. Dishwasher-safe and microwave-safe, made from high-quality stoneware with a chip-resistant glaze. Includes 6 dinner plates, side plates, and bowls.",
+    images: [
+      "https://picsum.photos/seed/dinnerset1/400/400",
+      "https://picsum.photos/seed/dinnerset2/400/400",
+    ],
   },
   {
     id: 9,
@@ -288,6 +327,10 @@ export const PRODUCTS: Product[] = [
     rating: 3.9,
     description:
       "Eco-friendly bamboo cutting board with juice grooves and a non-slip bottom. Harder than wood, gentler on knife blades. Naturally antibacterial and odor-resistant. Dimensions: 45cm x 30cm x 1.5cm. Ideal for chopping vegetables, fruits, and meats.",
+    images: [
+      "https://picsum.photos/seed/cuttingboard1/400/400",
+      "https://picsum.photos/seed/cuttingboard2/400/400",
+    ],
   },
   {
     id: 10,
@@ -299,6 +342,10 @@ export const PRODUCTS: Product[] = [
     rating: 4.4,
     description:
       "Ultrasonic aromatherapy diffuser with 7-color LED mood lighting and auto shut-off feature. Covers up to 300 sq ft, runs for up to 6 hours on a full tank. Whisper-quiet operation makes it perfect for bedrooms, offices, and meditation rooms. Compatible with all essential oils.",
+    images: [
+      "https://picsum.photos/seed/diffuser1/400/400",
+      "https://picsum.photos/seed/diffuser2/400/400",
+    ],
   },
   {
     id: 11,
@@ -319,6 +366,12 @@ export const PRODUCTS: Product[] = [
       Connectivity: "5G, WiFi 6E, Bluetooth 5.3",
       "Water Resistance": "IP68",
     },
+    images: [
+      "https://picsum.photos/seed/smartphone1/400/400",
+      "https://picsum.photos/seed/smartphone2/400/400",
+      "https://picsum.photos/seed/smartphone3/400/400",
+      "https://picsum.photos/seed/smartphone4/400/400",
+    ],
     variants: [
       {
         id: "v11-1",
@@ -373,6 +426,11 @@ export const PRODUCTS: Product[] = [
       "Annual Energy Consumption": "264 kWh",
       Refrigerant: "R600a",
     },
+    images: [
+      "https://picsum.photos/seed/fridge1/400/400",
+      "https://picsum.photos/seed/fridge2/400/400",
+      "https://picsum.photos/seed/fridge3/400/400",
+    ],
     variants: [
       {
         id: "v12-1",
@@ -413,6 +471,474 @@ export const PRODUCTS: Product[] = [
         colorHex: "#1C1C1E",
         price: 35000,
         stock: 2,
+      },
+    ],
+  },
+  {
+    id: 13,
+    title: "Samsung Galaxy M35 5G",
+    seller: "TechZone Store",
+    category: "Electronics",
+    price: 14999,
+    stock: 50,
+    rating: 4.4,
+    description:
+      "Samsung Galaxy M35 5G features a powerful Exynos 1380 processor with 6000mAh battery. Perfect for gaming and heavy usage with 50MP camera system.",
+    specifications: {
+      Display: '6.6" FHD+ Super AMOLED',
+      Processor: "Exynos 1380",
+      Battery: "6000mAh",
+      Camera: "50MP + 8MP + 2MP",
+      OS: "Android 14",
+      Brand: "Samsung",
+    },
+    images: [
+      "https://picsum.photos/seed/samsungm35a/400/400",
+      "https://picsum.photos/seed/samsungm35b/400/400",
+      "https://picsum.photos/seed/samsungm35c/400/400",
+      "https://picsum.photos/seed/samsungm35d/400/400",
+    ],
+    variants: [
+      {
+        id: "13-1",
+        size: "6GB+128GB",
+        color: "Midnight Blue",
+        colorHex: "#1B3A7A",
+        price: 14999,
+        stock: 20,
+      },
+      {
+        id: "13-2",
+        size: "6GB+128GB",
+        color: "Icy Silver",
+        colorHex: "#C0C8D6",
+        price: 14999,
+        stock: 15,
+      },
+      {
+        id: "13-3",
+        size: "8GB+256GB",
+        color: "Midnight Blue",
+        colorHex: "#1B3A7A",
+        price: 17999,
+        stock: 10,
+      },
+      {
+        id: "13-4",
+        size: "8GB+256GB",
+        color: "Icy Silver",
+        colorHex: "#C0C8D6",
+        price: 17999,
+        stock: 5,
+      },
+    ],
+  },
+  {
+    id: 14,
+    title: "Apple iPhone 15 (128GB)",
+    seller: "TechZone Store",
+    category: "Electronics",
+    price: 69999,
+    stock: 30,
+    rating: 4.8,
+    description:
+      "iPhone 15 features the powerful A16 Bionic chip, a 48MP main camera with 2x optical zoom, and USB-C connectivity. Dynamic Island for notifications.",
+    specifications: {
+      Display: '6.1" Super Retina XDR OLED',
+      Chip: "A16 Bionic",
+      Camera: "48MP Main + 12MP Ultra Wide",
+      Battery: "Up to 20 hrs",
+      OS: "iOS 17",
+      Brand: "Apple",
+    },
+    images: [
+      "https://picsum.photos/seed/iphone15a/400/400",
+      "https://picsum.photos/seed/iphone15b/400/400",
+      "https://picsum.photos/seed/iphone15c/400/400",
+      "https://picsum.photos/seed/iphone15d/400/400",
+    ],
+    variants: [
+      {
+        id: "14-1",
+        size: "128GB",
+        color: "Black Titanium",
+        colorHex: "#2C2C2E",
+        price: 69999,
+        stock: 12,
+      },
+      {
+        id: "14-2",
+        size: "128GB",
+        color: "Pink",
+        colorHex: "#F4A7B9",
+        price: 69999,
+        stock: 8,
+      },
+      {
+        id: "14-3",
+        size: "256GB",
+        color: "Black Titanium",
+        colorHex: "#2C2C2E",
+        price: 79999,
+        stock: 6,
+      },
+      {
+        id: "14-4",
+        size: "256GB",
+        color: "Pink",
+        colorHex: "#F4A7B9",
+        price: 79999,
+        stock: 4,
+      },
+      {
+        id: "14-5",
+        size: "512GB",
+        color: "Black Titanium",
+        colorHex: "#2C2C2E",
+        price: 99999,
+        stock: 2,
+      },
+    ],
+  },
+  {
+    id: 15,
+    title: "HP Pavilion 15 Laptop",
+    seller: "TechZone Store",
+    category: "Electronics",
+    price: 54999,
+    stock: 20,
+    rating: 4.3,
+    description:
+      "HP Pavilion 15 with 12th Gen Intel Core i5 processor, Full HD IPS display and fast SSD storage. Ideal for students and professionals.",
+    specifications: {
+      Display: '15.6" FHD IPS',
+      Processor: "Intel Core i5-1235U",
+      Graphics: "Intel Iris Xe",
+      Battery: "Up to 8 hrs",
+      OS: "Windows 11",
+      Brand: "HP",
+    },
+    images: [
+      "https://picsum.photos/seed/hplaptopa/400/400",
+      "https://picsum.photos/seed/hplaptopb/400/400",
+      "https://picsum.photos/seed/hplaptopc/400/400",
+    ],
+    variants: [
+      {
+        id: "15-1",
+        size: "8GB+512GB SSD",
+        color: "Natural Silver",
+        colorHex: "#A8A9AD",
+        price: 54999,
+        stock: 10,
+      },
+      {
+        id: "15-2",
+        size: "16GB+1TB SSD",
+        color: "Natural Silver",
+        colorHex: "#A8A9AD",
+        price: 69999,
+        stock: 6,
+      },
+      {
+        id: "15-3",
+        size: "16GB+1TB SSD",
+        color: "Spruce Blue",
+        colorHex: "#1B4D8E",
+        price: 71999,
+        stock: 4,
+      },
+    ],
+  },
+  {
+    id: 16,
+    title: "Puma Men's Graphic T-Shirt",
+    seller: "Fashion Hub",
+    category: "Fashion",
+    price: 699,
+    stock: 100,
+    rating: 4.2,
+    description:
+      "Puma Men's Graphic T-Shirt made from 100% cotton jersey fabric. Regular fit with iconic Puma cat logo print.",
+    specifications: {
+      Material: "100% Cotton Jersey",
+      Fit: "Regular Fit",
+      Sleeve: "Half Sleeve",
+      "Wash Care": "Machine Washable",
+      Brand: "Puma",
+    },
+    images: [
+      "https://picsum.photos/seed/pumatshirta/400/400",
+      "https://picsum.photos/seed/pumatshirtb/400/400",
+      "https://picsum.photos/seed/pumatshirtc/400/400",
+    ],
+    variants: [
+      {
+        id: "16-1",
+        size: "S",
+        color: "White",
+        colorHex: "#FFFFFF",
+        price: 699,
+        stock: 20,
+      },
+      {
+        id: "16-2",
+        size: "M",
+        color: "White",
+        colorHex: "#FFFFFF",
+        price: 699,
+        stock: 20,
+      },
+      {
+        id: "16-3",
+        size: "L",
+        color: "White",
+        colorHex: "#FFFFFF",
+        price: 699,
+        stock: 20,
+      },
+      {
+        id: "16-4",
+        size: "XL",
+        color: "White",
+        colorHex: "#FFFFFF",
+        price: 749,
+        stock: 15,
+      },
+      {
+        id: "16-5",
+        size: "S",
+        color: "Black",
+        colorHex: "#1C1C1E",
+        price: 699,
+        stock: 15,
+      },
+      {
+        id: "16-6",
+        size: "M",
+        color: "Black",
+        colorHex: "#1C1C1E",
+        price: 699,
+        stock: 15,
+      },
+      {
+        id: "16-7",
+        size: "L",
+        color: "Black",
+        colorHex: "#1C1C1E",
+        price: 699,
+        stock: 15,
+      },
+      {
+        id: "16-8",
+        size: "XL",
+        color: "Black",
+        colorHex: "#1C1C1E",
+        price: 749,
+        stock: 10,
+      },
+      {
+        id: "16-9",
+        size: "M",
+        color: "Navy Blue",
+        colorHex: "#1B2A6B",
+        price: 699,
+        stock: 10,
+      },
+      {
+        id: "16-10",
+        size: "L",
+        color: "Navy Blue",
+        colorHex: "#1B2A6B",
+        price: 699,
+        stock: 10,
+      },
+    ],
+  },
+  {
+    id: 17,
+    title: "Levi's Style Men's Slim Fit Jeans",
+    seller: "Fashion Hub",
+    category: "Fashion",
+    price: 1499,
+    stock: 80,
+    rating: 4.5,
+    description:
+      "Slim fit denim jeans with superior stretch comfort. 5-pocket styling, zip fly, and signature hardware. Perfect for casual and semi-formal occasions.",
+    specifications: {
+      Material: "98% Cotton, 2% Elastane",
+      Fit: "Slim Fit",
+      Rise: "Mid Rise",
+      Wash: "Machine Wash Cold",
+      Brand: "Levi's Style",
+    },
+    images: [
+      "https://picsum.photos/seed/levisjeansa/400/400",
+      "https://picsum.photos/seed/levisjeansb/400/400",
+      "https://picsum.photos/seed/levisjeansc/400/400",
+    ],
+    variants: [
+      {
+        id: "17-1",
+        size: "30W",
+        color: "Classic Blue",
+        colorHex: "#2E5E99",
+        price: 1499,
+        stock: 15,
+      },
+      {
+        id: "17-2",
+        size: "32W",
+        color: "Classic Blue",
+        colorHex: "#2E5E99",
+        price: 1499,
+        stock: 20,
+      },
+      {
+        id: "17-3",
+        size: "34W",
+        color: "Classic Blue",
+        colorHex: "#2E5E99",
+        price: 1499,
+        stock: 15,
+      },
+      {
+        id: "17-4",
+        size: "36W",
+        color: "Classic Blue",
+        colorHex: "#2E5E99",
+        price: 1549,
+        stock: 10,
+      },
+      {
+        id: "17-5",
+        size: "30W",
+        color: "Midnight Black",
+        colorHex: "#1C1C1E",
+        price: 1599,
+        stock: 8,
+      },
+      {
+        id: "17-6",
+        size: "32W",
+        color: "Midnight Black",
+        colorHex: "#1C1C1E",
+        price: 1599,
+        stock: 8,
+      },
+      {
+        id: "17-7",
+        size: "34W",
+        color: "Grey Stone",
+        colorHex: "#808080",
+        price: 1549,
+        stock: 6,
+      },
+      {
+        id: "17-8",
+        size: "36W",
+        color: "Grey Stone",
+        colorHex: "#808080",
+        price: 1599,
+        stock: 4,
+      },
+    ],
+  },
+  {
+    id: 18,
+    title: "Adidas Ultraboost 22 Running Shoes",
+    seller: "Fashion Hub",
+    category: "Fashion",
+    price: 8999,
+    stock: 60,
+    rating: 4.6,
+    description:
+      "Adidas Ultraboost 22 with responsive BOOST midsole for ultimate energy return. Primeknit upper for a snug, sock-like fit. Ideal for long-distance running.",
+    specifications: {
+      Upper: "Primeknit+",
+      Midsole: "BOOST",
+      Outsole: "Continental Rubber",
+      Closure: "Lace-up",
+      Brand: "Adidas",
+    },
+    images: [
+      "https://picsum.photos/seed/adidasshoesa/400/400",
+      "https://picsum.photos/seed/adidasshoesb/400/400",
+      "https://picsum.photos/seed/adidasshoesc/400/400",
+      "https://picsum.photos/seed/adidasshoesdx/400/400",
+    ],
+    variants: [
+      {
+        id: "18-1",
+        size: "UK 6",
+        color: "Core Black",
+        colorHex: "#1C1C1E",
+        price: 8999,
+        stock: 8,
+      },
+      {
+        id: "18-2",
+        size: "UK 7",
+        color: "Core Black",
+        colorHex: "#1C1C1E",
+        price: 8999,
+        stock: 10,
+      },
+      {
+        id: "18-3",
+        size: "UK 8",
+        color: "Core Black",
+        colorHex: "#1C1C1E",
+        price: 8999,
+        stock: 12,
+      },
+      {
+        id: "18-4",
+        size: "UK 9",
+        color: "Core Black",
+        colorHex: "#1C1C1E",
+        price: 8999,
+        stock: 8,
+      },
+      {
+        id: "18-5",
+        size: "UK 10",
+        color: "Core Black",
+        colorHex: "#1C1C1E",
+        price: 8999,
+        stock: 5,
+      },
+      {
+        id: "18-6",
+        size: "UK 6",
+        color: "Cloud White",
+        colorHex: "#F5F5F5",
+        price: 9499,
+        stock: 6,
+      },
+      {
+        id: "18-7",
+        size: "UK 7",
+        color: "Cloud White",
+        colorHex: "#F5F5F5",
+        price: 9499,
+        stock: 8,
+      },
+      {
+        id: "18-8",
+        size: "UK 8",
+        color: "Cloud White",
+        colorHex: "#F5F5F5",
+        price: 9499,
+        stock: 10,
+      },
+      {
+        id: "18-9",
+        size: "UK 9",
+        color: "Cloud White",
+        colorHex: "#F5F5F5",
+        price: 9499,
+        stock: 6,
       },
     ],
   },

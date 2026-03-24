@@ -1,5 +1,6 @@
 import { useCart } from "@/context/CartContext";
-import { PRODUCTS, type Product, type ProductVariant } from "@/data/products";
+import { useProducts } from "@/context/ProductContext";
+import type { Product, ProductVariant } from "@/data/products";
 import { addToHistory, getHistory } from "@/utils/browsingHistory";
 import {
   ArrowLeft,
@@ -255,13 +256,15 @@ export default function ProductDetailPage({
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   const colorScrollRef = useRef<HTMLDivElement>(null);
   const sizeScrollRef = useRef<HTMLDivElement>(null);
   const mainButtonsRef = useRef<HTMLDivElement>(null);
 
-  const product = PRODUCTS.find((p) => p.id === productId);
+  const { products } = useProducts();
+  const product = products.find((p) => p.id === productId);
 
   useEffect(() => {
     addToHistory(productId);
@@ -411,7 +414,7 @@ export default function ProductDetailPage({
       : "Add to Cart";
 
   // Related products
-  const relatedProducts = PRODUCTS.filter(
+  const relatedProducts = products.filter(
     (p) => p.category === product.category && p.id !== product.id,
   );
 
@@ -419,14 +422,14 @@ export default function ProductDetailPage({
   const history = getHistory();
   const historyProducts = history
     .filter((id) => id !== product.id)
-    .map((id) => PRODUCTS.find((p) => p.id === id))
+    .map((id) => products.find((p) => p.id === id))
     .filter((p): p is Product => !!p)
     .slice(0, 6);
 
   // Frequently bought together
   const comboIds = COMBOS[product.id] ?? [];
   const comboProducts = comboIds
-    .map((id) => PRODUCTS.find((p) => p.id === id))
+    .map((id) => products.find((p) => p.id === id))
     .filter((p): p is Product => !!p);
   const comboTotal = comboProducts.reduce((sum, p) => {
     const price = p.variants?.length
@@ -484,29 +487,78 @@ export default function ProductDetailPage({
           {/* Hero Section */}
           <div className="grid md:grid-cols-2 gap-8 mb-10">
             {/* Image */}
-            <div
-              className="rounded-2xl flex items-center justify-center text-8xl relative overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, #f0f6ff 0%, #deeaff 100%)",
-                minHeight: 320,
-              }}
-            >
-              {categoryEmoji}
-              {isOutOfStock && (
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                  <span className="bg-red-500 text-white font-bold px-5 py-2 rounded-full">
-                    Out of Stock
-                  </span>
-                </div>
-              )}
-              {hasVariants && (
-                <div className="absolute top-3 right-3">
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
-                    style={{ backgroundColor: AFLINO_BLUE }}
-                  >
-                    {product.variants!.length} variants
-                  </span>
+            <div className="flex flex-col gap-3">
+              <div
+                className="rounded-2xl flex items-center justify-center relative overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #f0f6ff 0%, #deeaff 100%)",
+                  minHeight: 320,
+                }}
+              >
+                {product.images && product.images.length > 0 ? (
+                  <img
+                    src={product.images[activeImageIdx] ?? product.images[0]}
+                    alt={product.title}
+                    className="w-full h-80 object-cover rounded-2xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://picsum.photos/seed/fallback0/400/400";
+                    }}
+                  />
+                ) : (
+                  <span className="text-8xl">{categoryEmoji}</span>
+                )}
+                {isOutOfStock && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-2xl">
+                    <span className="bg-red-500 text-white font-bold px-5 py-2 rounded-full">
+                      Out of Stock
+                    </span>
+                  </div>
+                )}
+                {hasVariants && (
+                  <div className="absolute top-3 right-3">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
+                      style={{ backgroundColor: AFLINO_BLUE }}
+                    >
+                      {product.variants!.length} variants
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Thumbnail Strip */}
+              {product.images && product.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                  {product.images.map((imgUrl, idx) => (
+                    <button
+                      key={imgUrl}
+                      type="button"
+                      onClick={() => setActiveImageIdx(idx)}
+                      className="flex-shrink-0"
+                      style={{
+                        padding: 0,
+                        border:
+                          activeImageIdx === idx
+                            ? `2.5px solid ${AFLINO_BLUE}`
+                            : "2px solid #e5e7eb",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        background: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Thumbnail ${idx + 1}`}
+                        className="w-16 h-16 object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            `https://picsum.photos/seed/thumb${idx}/64/64`;
+                        }}
+                      />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -856,34 +908,42 @@ export default function ProductDetailPage({
           )}
 
           {/* ── Product Detail Images ── */}
-          <section className="border-t border-gray-100 py-6 mb-6">
-            <h2 className="text-lg font-bold mb-4" style={{ color: "#006AFF" }}>
-              Product Details
-            </h2>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-              {[
-                { emoji: "📷", label: "Detail View" },
-                { emoji: "🔍", label: "Close-up" },
-                { emoji: "📐", label: "Measurements" },
-                { emoji: "✅", label: "Quality Check" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="w-28 h-28 rounded-xl flex-shrink-0 flex flex-col items-center justify-center gap-1"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #e8f0ff 0%, #cce0ff 100%)",
-                    border: "1px solid #b3ccff",
-                  }}
-                >
-                  <span className="text-3xl">{item.emoji}</span>
-                  <span className="text-xs font-medium text-blue-700 text-center px-1">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
+          {product.images && product.images.length > 0 && (
+            <section className="border-t border-gray-100 py-6 mb-6">
+              <h2
+                className="text-lg font-bold mb-4"
+                style={{ color: "#006AFF" }}
+              >
+                Product Details
+              </h2>
+              <div
+                className="flex gap-3 hide-scrollbar pb-2"
+                style={{
+                  overflowX: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  marginLeft: "-1rem",
+                  marginRight: "-1rem",
+                  paddingLeft: "1rem",
+                  paddingRight: "1rem",
+                }}
+              >
+                {product.images.map((imgUrl, idx) => (
+                  <img
+                    key={imgUrl}
+                    src={imgUrl}
+                    alt={`${product.title} view ${idx + 1}`}
+                    className="w-28 h-28 rounded-xl flex-shrink-0 object-cover border border-gray-200"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        `https://picsum.photos/seed/fallback${idx}/112/112`;
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── Customer Reviews ── */}
           {(() => {

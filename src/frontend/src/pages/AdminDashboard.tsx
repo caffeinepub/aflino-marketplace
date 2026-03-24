@@ -1,3 +1,4 @@
+import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,15 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useProducts } from "@/context/ProductContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
 import {
   Building2,
   CheckCircle2,
+  LayoutDashboard,
   LogOut,
+  Package,
   Settings2,
   Shield,
+  Trash2,
   Users,
   Wallet,
   XCircle,
@@ -70,10 +75,17 @@ const statusColors: Record<string, string> = {
   Suspended: "bg-red-100 text-red-700",
 };
 
-type Tab = "vendors" | "approvals" | "payouts" | "settings";
+type Tab =
+  | "vendors"
+  | "approvals"
+  | "payouts"
+  | "settings"
+  | "products"
+  | "homepage";
 
 export default function AdminDashboard() {
   const { logout } = useRole();
+  const { products, deleteProduct } = useProducts();
   const { pendingSellers, approveSeller, rejectSeller } = useSellerContext();
   const {
     payoutRequests,
@@ -228,6 +240,32 @@ export default function AdminDashboard() {
           >
             <Settings2 className="w-4 h-4" />
             Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("products")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "products"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.products.tab"
+          >
+            <Package className="w-4 h-4" />
+            Products
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("homepage")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "homepage"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.homepage.tab"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Homepage Manager
           </button>
           <button
             type="button"
@@ -580,6 +618,118 @@ export default function AdminDashboard() {
               </>
             )}
 
+            {activeTab === "products" && (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                  All Products
+                </h2>
+                <p className="text-gray-500 text-sm mb-6">
+                  Manage marketplace products — delete demo or unwanted listings
+                </p>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="font-semibold text-gray-700">
+                          Product Name
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700">
+                          Category
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700">
+                          Price
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700">
+                          Stock
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700">
+                          Variants
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-12"
+                            data-ocid="products.empty_state"
+                          >
+                            <Package className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-gray-400">
+                              No products available.
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        products.map((product, i) => (
+                          <TableRow
+                            key={product.id}
+                            data-ocid={`product.item.${i + 1}`}
+                          >
+                            <TableCell className="font-medium text-gray-800 max-w-xs">
+                              <p className="line-clamp-2 leading-snug">
+                                {product.title}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                by {product.seller}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                {product.category}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-medium text-gray-800">
+                              ₹
+                              {(product.variants?.length
+                                ? Math.min(
+                                    ...product.variants.map((v) => v.price),
+                                  )
+                                : product.price
+                              ).toLocaleString("en-IN")}
+                            </TableCell>
+                            <TableCell className="text-gray-600">
+                              {product.stock}
+                            </TableCell>
+                            <TableCell className="text-gray-600">
+                              {product.variants?.length ? (
+                                <span className="text-xs bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full border border-pink-100">
+                                  {product.variants.length} variants
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    window.confirm(`Delete "${product.title}"?`)
+                                  )
+                                    deleteProduct(product.id);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                                style={{ background: "#dc2626" }}
+                                data-ocid={`product.delete_button.${i + 1}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+
             {activeTab === "settings" && (
               <div className="max-w-xl">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -676,6 +826,16 @@ export default function AdminDashboard() {
               </div>
             )}
           </motion.div>
+          {activeTab === "homepage" && (
+            <motion.div
+              key="homepage"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <HomepageManagerTab />
+            </motion.div>
+          )}
         </main>
       </div>
 

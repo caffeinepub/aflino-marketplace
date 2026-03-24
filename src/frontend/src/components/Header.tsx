@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PRODUCTS } from "@/data/products";
-import { Heart, Menu, Search, ShoppingCart, X } from "lucide-react";
+import {
+  Camera,
+  Globe,
+  Heart,
+  Menu,
+  Mic,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -50,19 +58,41 @@ function SearchBox({
 
   return (
     <div ref={wrapRef} className="relative w-full">
-      <Input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setShow(true);
-        }}
-        onFocus={() => setShow(true)}
-        className="pl-4 pr-10 py-2 rounded-full bg-gray-50 border-gray-200 text-sm focus:ring-[#006AFF]"
-        data-ocid={ocid}
-      />
-      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+      <div
+        className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border-2"
+        style={{ borderColor: "#006AFF" }}
+      >
+        <Search
+          className="w-4 h-4 flex-shrink-0"
+          style={{ color: "#006AFF" }}
+        />
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setShow(true);
+          }}
+          onFocus={() => setShow(true)}
+          className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400 min-w-0"
+          data-ocid={ocid}
+        />
+        <button
+          type="button"
+          className="flex-shrink-0 p-1 rounded-full hover:bg-blue-50 transition-colors"
+          aria-label="Voice search"
+        >
+          <Mic className="w-4 h-4" style={{ color: "#006AFF" }} />
+        </button>
+        <button
+          type="button"
+          className="flex-shrink-0 p-1 rounded-full hover:bg-blue-50 transition-colors"
+          aria-label="Image search"
+        >
+          <Camera className="w-4 h-4" style={{ color: "#006AFF" }} />
+        </button>
+      </div>
 
       <AnimatePresence>
         {show && suggestions.length > 0 && (
@@ -112,107 +142,126 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
 
+  function openFilters() {
+    setMobileOpen(false);
+    window.dispatchEvent(new Event("aflino:openFilters"));
+  }
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-header">
-      <div className="max-w-[1200px] mx-auto px-6 h-[72px] flex items-center gap-6">
-        {/* Logo */}
-        <a
-          href="#home"
-          className="flex-shrink-0 flex items-center"
-          data-ocid="nav.link"
-        >
-          <span className="text-2xl font-bold tracking-tight">
-            <span style={{ color: "#006AFF" }}>AFL</span>
-            <span style={{ color: "#FF1B8D" }}>INO</span>
-          </span>
-        </a>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      {/* Row 1: Logo + nav + icons + auth */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
+        <div className="flex items-center gap-3 h-[52px]">
+          {/* Logo */}
+          <a
+            href="#home"
+            className="flex-shrink-0 flex items-center"
+            data-ocid="nav.link"
+          >
+            <span className="text-2xl font-bold tracking-tight">
+              <span style={{ color: "#006AFF" }}>AFL</span>
+              <span style={{ color: "#FF1B8D" }}>INO</span>
+            </span>
+          </a>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1 ml-4">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              data-ocid="nav.link"
-              onClick={() => setActiveLink(link.label)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors relative ${
-                activeLink === link.label
-                  ? "text-primary"
-                  : "text-gray-700 hover:text-primary hover:bg-blue-50"
-              }`}
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1 ml-2">
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                data-ocid="nav.link"
+                onClick={() => setActiveLink(link.label)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors relative ${
+                  activeLink === link.label
+                    ? "text-primary"
+                    : "text-gray-700 hover:text-primary hover:bg-blue-50"
+                }`}
+              >
+                {link.label}
+                {activeLink === link.label && (
+                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full" />
+                )}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex-1" />
+
+          {/* Right icons */}
+          <div className="hidden md:flex items-center gap-1">
+            <button
+              type="button"
+              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
+              aria-label="Wishlist"
             >
-              {link.label}
-              {activeLink === link.label && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
-              )}
-            </a>
-          ))}
-        </nav>
+              <Heart className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
+              aria-label="Language"
+            >
+              <Globe className="w-5 h-5" />
+            </button>
+          </div>
 
-        {/* Search */}
-        <div className="hidden md:flex flex-1 max-w-md">
+          {/* Auth Buttons */}
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            <Button
+              type="button"
+              onClick={onLoginClick}
+              className="rounded-full px-5 h-8 text-sm font-semibold text-white"
+              style={{ backgroundColor: "#006AFF" }}
+              data-ocid="header.login.button"
+            >
+              Login
+            </Button>
+            <Button
+              type="button"
+              onClick={onRegisterClick}
+              className="rounded-full px-5 h-8 text-sm font-semibold text-white border-0"
+              style={{ backgroundColor: "#FF1B8D" }}
+              data-ocid="header.register.button"
+            >
+              Register
+            </Button>
+          </div>
+
+          {/* Mobile: icons + hamburger */}
+          <div className="flex md:hidden items-center gap-1">
+            <button
+              type="button"
+              className="p-1.5 text-gray-500"
+              aria-label="Wishlist"
+            >
+              <Heart className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              className="p-1.5 text-gray-700"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+              data-ocid="header.menu.toggle"
+            >
+              {mobileOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Search bar (all screen sizes) */}
+        <div className="pb-2">
           <SearchBox
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search products…"
+            placeholder="Search for products, brands and more..."
             ocid="header.search_input"
           />
         </div>
-
-        {/* Icons */}
-        <div className="hidden md:flex items-center gap-2 ml-auto">
-          <button
-            type="button"
-            className="p-2 text-gray-500 hover:text-primary transition-colors"
-            aria-label="Wishlist"
-          >
-            <Heart className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className="p-2 text-gray-500 hover:text-primary transition-colors"
-            aria-label="Cart"
-          >
-            <ShoppingCart className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Auth Buttons */}
-        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-          <Button
-            type="button"
-            onClick={onLoginClick}
-            className="rounded-full px-5 h-9 text-sm font-semibold text-white"
-            style={{ backgroundColor: "#006AFF" }}
-            data-ocid="header.login.button"
-          >
-            Login
-          </Button>
-          <Button
-            type="button"
-            onClick={onRegisterClick}
-            className="rounded-full px-5 h-9 text-sm font-semibold text-white border-0"
-            style={{ backgroundColor: "#FF1B8D" }}
-            data-ocid="header.register.button"
-          >
-            Register
-          </Button>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          className="md:hidden ml-auto p-2 text-gray-700"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-          data-ocid="header.menu.toggle"
-        >
-          {mobileOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
-        </button>
       </div>
 
       {/* Mobile Drawer */}
@@ -223,14 +272,16 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden bg-white border-t border-gray-100 px-6 py-4 flex flex-col gap-3 shadow-lg"
+            className="md:hidden bg-white border-t border-gray-100 px-4 py-3 flex flex-col gap-3 shadow-lg"
           >
-            <SearchBox
-              value={mobileSearch}
-              onChange={setMobileSearch}
-              placeholder="Search products…"
-              ocid="mobile.search_input"
-            />
+            <div className="mb-1">
+              <SearchBox
+                value={mobileSearch}
+                onChange={setMobileSearch}
+                placeholder="Search products…"
+                ocid="mobile.search_input"
+              />
+            </div>
 
             {navLinks.map((link) => (
               <a
@@ -251,7 +302,18 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               </a>
             ))}
 
-            <div className="flex gap-2 pt-2">
+            {/* Filters link in mobile menu */}
+            <button
+              type="button"
+              onClick={openFilters}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-blue-50 hover:text-[#006AFF] transition-colors text-left"
+              data-ocid="mobile.filters.button"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+            </button>
+
+            <div className="flex gap-2 pt-1">
               <Button
                 type="button"
                 onClick={() => {

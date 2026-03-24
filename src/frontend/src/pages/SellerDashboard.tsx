@@ -22,6 +22,7 @@ import {
   type OrderStatus,
   useOrderTracking,
 } from "@/context/OrderTrackingContext";
+import { useProducts } from "@/context/ProductContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
@@ -109,6 +110,7 @@ export default function SellerDashboard({
     requestPayout,
   } = useWallet();
   const { orders, updateOrderStatus } = useOrderTracking();
+  const { addProduct } = useProducts();
 
   const approved = isApproved(sellerEmail);
   const [activeTab, setActiveTab] = useState<Tab>("upload");
@@ -177,6 +179,42 @@ export default function SellerDashboard({
     toast.success(
       `Product "${productName}" uploaded successfully${variantSummary}!`,
     );
+    addProduct({
+      id: Date.now(),
+      title: productName,
+      category:
+        (
+          {
+            electronics: "Electronics",
+            fashion: "Fashion",
+            home: "Home & Kitchen",
+            beauty: "Beauty",
+            sports: "Sports",
+            books: "Books",
+          } as Record<string, string>
+        )[category] || category,
+      price:
+        Number.parseFloat(price) ||
+        (variantRows[0] ? Number.parseFloat(variantRows[0].price) || 0 : 0),
+      description,
+      stock: 50,
+      rating: 4.0,
+      seller: "Seller Store",
+      images: [],
+      variants: variantsEnabled
+        ? variantRows.map((r) => ({
+            id: r.id,
+            label: r.size
+              ? `${r.size}${r.color ? ` + ${r.color}` : ""}`
+              : r.color,
+            size: r.size,
+            color: r.color,
+            colorHex: r.colorHex,
+            price: Number.parseFloat(r.price) || 0,
+            stock: Number.parseInt(r.stock) || 0,
+          }))
+        : [],
+    });
     setProductName("");
     setCategory("");
     setPrice("");

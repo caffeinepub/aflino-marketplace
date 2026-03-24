@@ -4,17 +4,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { CATEGORIES, PRODUCTS, type Product } from "@/data/products";
+import { useProducts } from "@/context/ProductContext";
+import { CATEGORIES, type Product } from "@/data/products";
 import { addToHistory } from "@/utils/browsingHistory";
-import {
-  PackageX,
-  ShoppingCart,
-  SlidersHorizontal,
-  Star,
-  X,
-} from "lucide-react";
+import { PackageX, ShoppingCart, Star, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Electronics: "bg-blue-50 text-blue-700 border-blue-100",
@@ -24,7 +19,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Sports: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
-const MAX_PRICE = 5000;
+const MAX_PRICE = 120000;
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -119,7 +114,7 @@ function SidebarFilter({
             ₹0
           </span>
           <span className="bg-white border border-gray-200 rounded px-1.5 py-0.5">
-            ₹5,000
+            ₹1,20,000
           </span>
         </div>
       </div>
@@ -248,7 +243,7 @@ function ProductCard({
       onClick={() => onOpen(product)}
     >
       <div
-        className="h-44 flex items-center justify-center text-4xl relative"
+        className="aspect-square flex items-center justify-center text-3xl relative"
         style={{
           background: "linear-gradient(135deg, #f8faff 0%, #eef4ff 100%)",
         }}
@@ -277,8 +272,8 @@ function ProductCard({
         )}
       </div>
 
-      <div className="p-4">
-        <div className="mb-2">
+      <div className="p-2 sm:p-4">
+        <div className="mb-1.5 sm:mb-2">
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
               CATEGORY_COLORS[product.category] ??
@@ -289,11 +284,13 @@ function ProductCard({
           </span>
         </div>
 
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug mb-1 line-clamp-2">
+        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug mb-1 line-clamp-2">
           {product.title}
         </h3>
-        <p className="text-xs text-gray-400 mb-1.5">by {product.seller}</p>
-        <div className="mb-3">
+        <p className="hidden sm:block text-xs text-gray-400 mb-1.5">
+          by {product.seller}
+        </p>
+        <div className="mb-2 sm:mb-3">
           <StarRating rating={product.rating} />
         </div>
 
@@ -302,15 +299,15 @@ function ProductCard({
             {hasVariants && (
               <p className="text-xs text-gray-400 leading-none mb-0.5">From</p>
             )}
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-sm sm:text-lg font-bold text-gray-900">
               ₹{displayPrice.toLocaleString("en-IN")}
             </span>
           </div>
           <Button
             type="button"
             size="sm"
-            className="h-8 px-3 rounded-full text-xs font-semibold text-white border-0 gap-1.5"
-            style={{ backgroundColor: "#FF1B8D" }}
+            className="h-7 sm:h-8 px-2 sm:px-3 rounded-full text-xs font-semibold text-white border-0 gap-1"
+            style={{ backgroundColor: "#006AFF" }}
             onClick={(e) => {
               e.stopPropagation();
               onOpen(product);
@@ -318,7 +315,10 @@ function ProductCard({
             data-ocid={`products.add_to_cart.button.${index + 1}`}
           >
             <ShoppingCart className="w-3 h-3" />
-            {hasVariants ? "Options" : "View"}
+            <span className="hidden sm:inline">
+              {hasVariants ? "Options" : "View"}
+            </span>
+            <span className="sm:hidden">+</span>
           </Button>
         </div>
       </div>
@@ -331,9 +331,31 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ onViewProduct }: ProductGridProps) {
+  const { products } = useProducts();
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Listen for open-filters event dispatched from Header hamburger menu
+  useEffect(() => {
+    function handleOpenFilters() {
+      setMobileSidebarOpen(true);
+    }
+    window.addEventListener("aflino:openFilters", handleOpenFilters);
+    return () =>
+      window.removeEventListener("aflino:openFilters", handleOpenFilters);
+  }, []);
+
+  // Listen for category filter event from CategoryFeedSection
+  useEffect(() => {
+    function handleFilterCategory(e: Event) {
+      const cat = (e as CustomEvent).detail as string;
+      setFilters((prev) => ({ ...prev, categories: [cat] }));
+    }
+    window.addEventListener("aflino:filterCategory", handleFilterCategory);
+    return () =>
+      window.removeEventListener("aflino:filterCategory", handleFilterCategory);
+  }, []);
 
   function handleOpen(product: Product) {
     addToHistory(product.id);
@@ -344,7 +366,7 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
     }
   }
 
-  const filtered = PRODUCTS.filter((p) => {
+  const filtered = products.filter((p) => {
     const effectivePrice = p.variants?.length
       ? Math.min(...p.variants.map((v) => v.price))
       : p.price;
@@ -364,26 +386,6 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
       className="py-14 px-4 max-w-[1200px] mx-auto"
       data-ocid="products.section"
     >
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-1">
-            All Products
-          </h2>
-          <p className="text-gray-500 text-sm">
-            Browse from our curated selection of top products
-          </p>
-        </div>
-        <button
-          type="button"
-          className="md:hidden flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 bg-white hover:border-[#006AFF] hover:text-[#006AFF] transition-colors"
-          onClick={() => setMobileSidebarOpen(true)}
-          data-ocid="filter.open_modal_button"
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          Filters
-        </button>
-      </div>
-
       <div className="flex gap-8">
         <div className="hidden md:block">
           <SidebarFilter
@@ -394,11 +396,6 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-500 mb-4">
-            Showing <strong className="text-gray-800">{filtered.length}</strong>{" "}
-            of {PRODUCTS.length} products
-          </p>
-
           <AnimatePresence mode="wait">
             {filtered.length === 0 ? (
               <motion.div
@@ -423,7 +420,7 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6"
               >
                 {filtered.map((product, i) => (
                   <ProductCard
@@ -439,7 +436,7 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
         </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay — triggered from Header hamburger */}
       <AnimatePresence>
         {mobileSidebarOpen && (
           <>

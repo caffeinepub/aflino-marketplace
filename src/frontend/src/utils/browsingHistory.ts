@@ -21,3 +21,9 @@ export function getHistory(): number[] {
     return [];
   }
 }
+
+export function clearHistory(): void {
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch {}
+}
