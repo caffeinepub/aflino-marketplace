@@ -62,10 +62,13 @@ function PillRow({
       style={{
         display: "flex",
         borderRadius: 50,
-        overflow: "hidden",
         border: `2px solid ${labelColor}`,
         background: "#fff",
         minHeight: 68,
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "visible",
+        boxSizing: "border-box",
       }}
     >
       {/* Label pill */}
@@ -137,26 +140,34 @@ function PillRow({
         </div>
       </div>
 
-      {/* Scrollable options */}
+      {/* Scrollable options — overflow hidden here so the pill border-radius clips correctly */}
       <div
-        ref={scrollRef}
         style={{
-          overflowX: "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 14px",
+          overflow: "hidden",
           flex: 1,
-          scrollBehavior: "smooth",
-          WebkitOverflowScrolling: "touch" as never,
-          touchAction: "pan-x",
-          // hide scrollbar
-          scrollbarWidth: "none" as never,
-          msOverflowStyle: "none" as never,
+          minWidth: 0,
+          borderRadius: "0 50px 50px 0",
         }}
-        className="hide-scrollbar"
       >
-        {children}
+        <div
+          ref={scrollRef}
+          style={{
+            overflowX: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 14px",
+            height: "100%",
+            scrollBehavior: "smooth",
+            WebkitOverflowScrolling: "touch" as never,
+            touchAction: "pan-x",
+            scrollbarWidth: "none" as never,
+            msOverflowStyle: "none" as never,
+          }}
+          className="hide-scrollbar"
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -292,7 +303,7 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
 
       <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent
-          className="max-w-lg p-0 overflow-hidden rounded-2xl"
+          className="max-w-lg w-full p-0 overflow-hidden rounded-2xl"
           data-ocid="product.modal"
         >
           {/* Image strip */}
@@ -312,7 +323,7 @@ export default function ProductDetailModal({ product, open, onClose }: Props) {
             )}
           </div>
 
-          <div className="p-5">
+          <div className="p-5 overflow-hidden">
             <DialogHeader className="mb-3 text-left">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
