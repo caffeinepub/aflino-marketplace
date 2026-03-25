@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { FlashSale } from "@/context/FlashSaleContext";
+import { useFlashSale } from "@/context/FlashSaleContext";
 import {
   type CategoryFeedConfig,
   type HomepageBanner,
@@ -18,6 +20,7 @@ import {
   type HomepageSection,
   useHomepageManager,
 } from "@/context/HomepageManagerContext";
+import { useProducts } from "@/context/ProductContext";
 import {
   Eye,
   GripVertical,
@@ -26,10 +29,11 @@ import {
   Sliders,
   Trash2,
   Upload,
+  Zap,
 } from "lucide-react";
 import { useRef, useState } from "react";
 
-// ── Drag-and-Drop helpers ─────────────────────────────────────────────────────
+// ── Drag-and-Drop helpers ──────────────────────────────────────────────────
 function useDragReorder<T extends { id: string }>(
   items: T[],
   onReorder: (newOrder: T[]) => void,
@@ -58,15 +62,41 @@ function useDragReorder<T extends { id: string }>(
   return { onDragStart, onDragOver, onDrop };
 }
 
-// ── Banner Section ────────────────────────────────────────────────────────────
+// Helper to format datetime-local value from ISO
+function toDatetimeLocal(iso?: string): string {
+  if (!iso) return "";
+  // datetime-local expects YYYY-MM-DDTHH:MM
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return "";
+  }
+}
+
+// ── Banner Section ────────────────────────────────────────────────────────────────
 function BannersSection() {
-  const { banners, addBanner, deleteBanner, reorderBanners, uploadProgress } =
-    useHomepageManager();
+  const {
+    banners,
+    addBanner,
+    deleteBanner,
+    updateBanner,
+    reorderBanners,
+    uploadProgress,
+  } = useHomepageManager();
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleEnd, setScheduleEnd] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(
+    null,
+  );
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { onDragStart, onDragOver, onDrop } = useDragReorder(
@@ -77,12 +107,45 @@ function BannersSection() {
   async function handleUpload() {
     if (!file || !title.trim()) return;
     setUploading(true);
-    await addBanner(file, title.trim(), link.trim());
+    await addBanner(
+      file,
+      title.trim(),
+      link.trim(),
+      scheduleStart ? new Date(scheduleStart).toISOString() : undefined,
+      scheduleEnd ? new Date(scheduleEnd).toISOString() : undefined,
+    );
     setUploading(false);
     setTitle("");
     setLink("");
+    setScheduleStart("");
+    setScheduleEnd("");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function startEditSchedule(banner: HomepageBanner) {
+    setEditingScheduleId(banner.id);
+    setEditStart(toDatetimeLocal(banner.scheduleStart));
+    setEditEnd(toDatetimeLocal(banner.scheduleEnd));
+  }
+
+  function saveEditSchedule(id: string) {
+    updateBanner(id, {
+      scheduleStart: editStart ? new Date(editStart).toISOString() : undefined,
+      scheduleEnd: editEnd ? new Date(editEnd).toISOString() : undefined,
+    });
+    setEditingScheduleId(null);
+  }
+
+  function formatDateRange(start?: string, end?: string): string {
+    const fmt = (iso: string) => {
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    };
+    if (start && end) return `\ud83d\udcc5 ${fmt(start)} – ${fmt(end)}`;
+    if (start) return `\ud83d\udcc5 From ${fmt(start)}`;
+    if (end) return `\ud83d\udcc5 Until ${fmt(end)}`;
+    return "";
   }
 
   return (
@@ -106,38 +169,125 @@ function BannersSection() {
 
       <div className="space-y-2">
         {banners.map((banner: HomepageBanner, i: number) => (
-          <div
-            key={banner.id}
-            draggable
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => onDragOver(e, i)}
-            onDrop={onDrop}
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-200 transition-colors"
-            data-ocid={`homepage.item.${i + 1}`}
-          >
-            <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <img
-              src={banner.imageUrl}
-              alt={banner.title}
-              className="w-[60px] h-[38px] object-cover rounded flex-shrink-0 border border-gray-200"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {banner.title}
-              </p>
-              <p className="text-xs text-gray-400 truncate">
-                {banner.redirectLink || "No link"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => deleteBanner(banner.id)}
-              className="p-1.5 rounded-md hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
-              aria-label="Delete banner"
-              data-ocid={`homepage.delete_button.${i + 1}`}
+          <div key={banner.id}>
+            <div
+              draggable
+              onDragStart={() => onDragStart(i)}
+              onDragOver={(e) => onDragOver(e, i)}
+              onDrop={onDrop}
+              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-200 transition-colors"
+              data-ocid={`homepage.item.${i + 1}`}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <img
+                src={banner.imageUrl}
+                alt={banner.title}
+                className="w-[60px] h-[38px] object-cover rounded flex-shrink-0 border border-gray-200"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">
+                  {banner.title}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {banner.redirectLink || "No link"}
+                </p>
+                {(banner.scheduleStart || banner.scheduleEnd) && (
+                  <p className="text-[10px] text-blue-500 mt-0.5">
+                    {formatDateRange(banner.scheduleStart, banner.scheduleEnd)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => startEditSchedule(banner)}
+                className="text-[10px] text-blue-500 hover:text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 hover:border-blue-400 flex-shrink-0 whitespace-nowrap"
+                data-ocid={`homepage.edit_button.${i + 1}`}
+              >
+                \ud83d\udcc5 Schedule
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteBanner(banner.id)}
+                className="p-1.5 rounded-md hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                aria-label="Delete banner"
+                data-ocid={`homepage.delete_button.${i + 1}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Inline schedule editor */}
+            {editingScheduleId === banner.id && (
+              <div className="mt-1 ml-6 p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
+                <p className="text-xs font-semibold text-blue-700">
+                  📅 Edit Schedule
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-gray-500 mb-0.5 block">
+                      Show From
+                    </Label>
+                    <Input
+                      type="datetime-local"
+                      value={editStart}
+                      onChange={(e) => setEditStart(e.target.value)}
+                      className="text-xs h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-gray-500 mb-0.5 block">
+                      Hide After
+                    </Label>
+                    <Input
+                      type="datetime-local"
+                      value={editEnd}
+                      onChange={(e) => setEditEnd(e.target.value)}
+                      className="text-xs h-8"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="text-xs h-7 text-white"
+                    style={{ backgroundColor: "#006AFF" }}
+                    onClick={() => saveEditSchedule(banner.id)}
+                    data-ocid="homepage.save_button"
+                  >
+                    Save Schedule
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setEditingScheduleId(null)}
+                    data-ocid="homepage.cancel_button"
+                  >
+                    Cancel
+                  </Button>
+                  {(banner.scheduleStart || banner.scheduleEnd) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 text-red-500 border-red-200"
+                      onClick={() => {
+                        updateBanner(banner.id, {
+                          scheduleStart: undefined,
+                          scheduleEnd: undefined,
+                        });
+                        setEditingScheduleId(null);
+                      }}
+                      data-ocid="homepage.delete_button"
+                    >
+                      Clear Schedule
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {banners.length === 0 && (
@@ -190,6 +340,37 @@ function BannersSection() {
             data-ocid="homepage.input"
           />
         </div>
+        {/* Schedule inputs */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">
+              Show From (optional)
+            </Label>
+            <Input
+              type="datetime-local"
+              value={scheduleStart}
+              onChange={(e) => setScheduleStart(e.target.value)}
+              className="text-sm"
+              data-ocid="homepage.input"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">
+              Hide After (optional)
+            </Label>
+            <Input
+              type="datetime-local"
+              value={scheduleEnd}
+              onChange={(e) => setScheduleEnd(e.target.value)}
+              className="text-sm"
+              data-ocid="homepage.input"
+            />
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-400">
+          Leave schedule blank to always show. A "Sunday Sale" banner with a
+          Monday end time will auto-hide when the sale ends.
+        </p>
         {uploading && uploadProgress > 0 && (
           <div data-ocid="homepage.loading_state">
             <p className="text-xs text-gray-500 mb-1">
@@ -231,7 +412,9 @@ function BannersSection() {
                   9:41
                 </span>
                 <div className="w-[80px] h-4 bg-black rounded-full" />
-                <span className="text-white text-[10px]">●●●</span>
+                <span className="text-white text-[10px]">
+                  \u25cf\u25cf\u25cf
+                </span>
               </div>
               <div className="overflow-hidden" style={{ width: "100%" }}>
                 <BannerCarousel />
@@ -257,7 +440,7 @@ function BannersSection() {
   );
 }
 
-// ── Categories Section ────────────────────────────────────────────────────────
+// ── Categories Section ────────────────────────────────────────────────────────────────
 function CategoriesSection() {
   const {
     categories,
@@ -383,7 +566,7 @@ function CategoriesSection() {
   );
 }
 
-// ── Brands Section ────────────────────────────────────────────────────────────
+// ── Brands Section ────────────────────────────────────────────────────────────────
 function BrandsSection() {
   const {
     brands,
@@ -474,11 +657,6 @@ function BrandsSection() {
                   brand.enabled !== false ? "#006AFF" : "#e5e7eb",
                 color: brand.enabled !== false ? "#fff" : "#6b7280",
               }}
-              title={
-                brand.enabled !== false
-                  ? "Visible on homepage"
-                  : "Hidden from homepage"
-              }
               data-ocid={`homepage.toggle.${i + 1}`}
             >
               {brand.enabled !== false ? "Show" : "Hidden"}
@@ -613,7 +791,7 @@ function BrandsSection() {
   );
 }
 
-// ── Feed Customizer Section ───────────────────────────────────────────────────
+// ── Feed Customizer Section ──────────────────────────────────────────────────────────────
 function FeedsSection() {
   const { categoryFeeds, updateFeed, reorderFeeds, addFeed, deleteFeed } =
     useHomepageManager();
@@ -657,7 +835,6 @@ function FeedsSection() {
         </div>
       </div>
 
-      {/* Feed list */}
       <div className="space-y-2">
         {categoryFeeds.map((feed: CategoryFeedConfig, i: number) => (
           <div
@@ -674,12 +851,9 @@ function FeedsSection() {
             data-ocid={`homepage.item.${i + 1}`}
           >
             <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
-
-            {/* Drag handle number */}
             <span className="w-5 text-center text-xs font-bold text-gray-400 flex-shrink-0">
               {i + 1}
             </span>
-
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800 truncate">
                 {feed.title}
@@ -691,8 +865,6 @@ function FeedsSection() {
                 </span>
               </p>
             </div>
-
-            {/* Toggle */}
             <button
               type="button"
               onClick={() => updateFeed(feed.id, { enabled: !feed.enabled })}
@@ -710,7 +882,6 @@ function FeedsSection() {
                 }}
               />
             </button>
-
             <button
               type="button"
               onClick={() => deleteFeed(feed.id)}
@@ -732,7 +903,6 @@ function FeedsSection() {
         )}
       </div>
 
-      {/* Add Feed Form */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
         <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
           <Plus className="w-4 h-4" style={{ color: "#006AFF" }} />
@@ -781,13 +951,14 @@ function FeedsSection() {
   );
 }
 
-// ── Section Reordering ────────────────────────────────────────────────────────
+// ── Section Reordering ──────────────────────────────────────────────────────────────
 const SECTION_ICONS: Record<string, string> = {
-  banners: "🖼️",
-  categories: "🔵",
-  brands: "🏷️",
-  feeds: "📦",
-  recently_viewed: "🕐",
+  banners: "\ud83d\uddbc\ufe0f",
+  categories: "\ud83d\udd35",
+  brands: "\ud83c\udff7\ufe0f",
+  feeds: "\ud83d\udce6",
+  recently_viewed: "\ud83d\udd50",
+  flash_sale: "\u26a1",
 };
 
 function SectionOrderSection() {
@@ -827,7 +998,7 @@ function SectionOrderSection() {
               {i + 1}
             </span>
             <span className="text-lg flex-shrink-0">
-              {SECTION_ICONS[section.key] ?? "📄"}
+              {SECTION_ICONS[section.key] ?? "\ud83d\udcc4"}
             </span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800">
@@ -847,15 +1018,251 @@ function SectionOrderSection() {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <p className="text-xs text-[#006AFF] font-semibold mb-1">Tip</p>
         <p className="text-xs text-gray-600">
-          For seasonal sales (e.g. Eid Sale, Summer Collection), drag the
-          relevant Category Feeds section to the top so customers see it first.
+          For seasonal sales (e.g. Eid Sale, Summer Collection), drag the Flash
+          Sale section to the top so customers see it first.
         </p>
       </div>
     </div>
   );
 }
 
-// ── Main Tab ──────────────────────────────────────────────────────────────────
+// ── Flash Sale Section ──────────────────────────────────────────────────────────────
+
+function FlashSaleAdminSection() {
+  const { flashSales, addFlashSale, removeFlashSale } = useFlashSale();
+  const { products } = useProducts();
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [salePrice, setSalePrice] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+
+  function handleAddSale() {
+    const pid = Number.parseInt(selectedProductId);
+    const sp = Number.parseFloat(salePrice);
+    if (!pid || !sp || sp <= 0) return;
+    const product = products.find((p) => p.id === pid);
+    if (!product) return;
+
+    addFlashSale({
+      productId: pid,
+      productTitle: product.title,
+      originalPrice: product.price,
+      salePrice: sp,
+      startTime: startTime ? new Date(startTime).toISOString() : null,
+      endTime: endTime ? new Date(endTime).toISOString() : null,
+    });
+
+    setSelectedProductId("");
+    setSalePrice("");
+    setStartTime("");
+    setEndTime("");
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-orange-500" />
+          Flash Sale Manager
+        </h3>
+        <p className="text-xs text-gray-400 mt-1">
+          Create timed flash sales with live countdowns, or "Hot Deal" badges
+          for always-on discounts.
+        </p>
+      </div>
+
+      {/* Tip */}
+      <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+        <p className="text-xs text-orange-700 font-semibold mb-1">
+          ⚡ Auto-Logic
+        </p>
+        <p className="text-xs text-gray-600">
+          <strong>With End Time</strong> → Shows "🔥 Flash Sale" badge + live
+          countdown timer on product cards and homepage section.
+          <br />
+          <strong>No End Time</strong> → Shows "🔥 Hot Deal" badge only. Leave
+          End Time blank to use this mode.
+        </p>
+      </div>
+
+      {/* Active sales list */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-gray-700">
+          Active Flash Sales ({flashSales.length})
+        </h4>
+        {flashSales.length === 0 && (
+          <p
+            className="text-sm text-gray-400 text-center py-6 bg-gray-50 rounded-xl"
+            data-ocid="flash_sale.empty_state"
+          >
+            No flash sales yet. Add one below.
+          </p>
+        )}
+        {flashSales.map((sale: FlashSale, i: number) => {
+          const isExpired =
+            sale.endTime && new Date(sale.endTime).getTime() < Date.now();
+          return (
+            <div
+              key={sale.id}
+              className={`flex items-center gap-3 p-3 rounded-lg border ${
+                isExpired
+                  ? "bg-gray-50 border-gray-200 opacity-60"
+                  : "bg-orange-50 border-orange-200"
+              }`}
+              data-ocid={`flash_sale.item.${i + 1}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">
+                  {sale.productTitle}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: "#006AFF" }}
+                  >
+                    ₹{sale.salePrice.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-xs text-gray-400 line-through">
+                    ₹{sale.originalPrice.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">
+                    -
+                    {Math.round(
+                      ((sale.originalPrice - sale.salePrice) /
+                        sale.originalPrice) *
+                        100,
+                    )}
+                    %
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {sale.endTime
+                    ? `\ud83d\udd25 Flash Sale • Ends ${new Date(sale.endTime).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`
+                    : "\ud83d\udd25 Hot Deal (no timer)"}
+                  {isExpired && (
+                    <span className="text-red-500 ml-1">(Expired)</span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeFlashSale(sale.id)}
+                className="p-1.5 rounded-md hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                aria-label="Remove flash sale"
+                data-ocid={`flash_sale.delete_button.${i + 1}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add Flash Sale form */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+          <Plus className="w-4 h-4" style={{ color: "#006AFF" }} />
+          Add Flash Sale
+        </p>
+
+        <div>
+          <Label className="text-xs text-gray-500 mb-1 block">
+            Select Product *
+          </Label>
+          <select
+            value={selectedProductId}
+            onChange={(e) => setSelectedProductId(e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            data-ocid="flash_sale.select"
+          >
+            <option value="">-- Choose a product --</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                #{p.id} • {p.title} • ₹{p.price.toLocaleString("en-IN")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label className="text-xs text-gray-500 mb-1 block">
+            Flash Sale Price (₹) *
+          </Label>
+          <Input
+            type="number"
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
+            placeholder="e.g. 1299"
+            className="text-sm"
+            data-ocid="flash_sale.input"
+          />
+          {selectedProductId && salePrice && (
+            <p className="text-[10px] text-emerald-600 mt-0.5">
+              {(() => {
+                const p = products.find(
+                  (pr) => pr.id === Number.parseInt(selectedProductId),
+                );
+                const sp = Number.parseFloat(salePrice);
+                if (p && sp > 0 && sp < p.price) {
+                  return `Discount: ${Math.round(((p.price - sp) / p.price) * 100)}% off (saving ₹${(p.price - sp).toLocaleString("en-IN")})`;
+                }
+                return "";
+              })()}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">
+              Start Time (optional)
+            </Label>
+            <Input
+              type="datetime-local"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="text-sm"
+              data-ocid="flash_sale.input"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500 mb-1 block">
+              End Time (optional)
+            </Label>
+            <Input
+              type="datetime-local"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="text-sm"
+              data-ocid="flash_sale.input"
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Leave blank → "Hot Deal" badge (no timer)
+            </p>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          disabled={
+            !selectedProductId ||
+            !salePrice ||
+            Number.parseFloat(salePrice) <= 0
+          }
+          onClick={handleAddSale}
+          className="gap-2 w-full text-white"
+          style={{ backgroundColor: "#006AFF" }}
+          data-ocid="flash_sale.submit_button"
+        >
+          <Zap className="w-4 h-4" />
+          Create Flash Sale
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Tab ────────────────────────────────────────────────────────────────
 export default function HomepageManagerTab() {
   return (
     <div>
@@ -864,8 +1271,8 @@ export default function HomepageManagerTab() {
           Homepage Manager
         </h2>
         <p className="text-gray-500 text-sm">
-          Manage hero banners, categories, brands, and feed sections. Drag to
-          reorder anything.
+          Manage hero banners, categories, brands, feed sections, and flash
+          sales. Drag to reorder anything.
         </p>
       </div>
 
@@ -887,6 +1294,14 @@ export default function HomepageManagerTab() {
             <LayoutList className="w-3.5 h-3.5" />
             Section Order
           </TabsTrigger>
+          <TabsTrigger
+            value="flash_sale"
+            className="gap-1.5"
+            data-ocid="homepage.tab"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            \u26a1 Flash Sale
+          </TabsTrigger>
           <TabsTrigger value="banners" data-ocid="homepage.tab">
             Banners
           </TabsTrigger>
@@ -903,6 +1318,9 @@ export default function HomepageManagerTab() {
         </TabsContent>
         <TabsContent value="sections">
           <SectionOrderSection />
+        </TabsContent>
+        <TabsContent value="flash_sale">
+          <FlashSaleAdminSection />
         </TabsContent>
         <TabsContent value="banners">
           <BannersSection />

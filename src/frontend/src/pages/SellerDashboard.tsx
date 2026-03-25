@@ -1329,6 +1329,8 @@ export default function SellerDashboard({
                                         ],
                                         totalAmount: order.amountRaw,
                                       }}
+                                      customerPhone={order.buyerPhone}
+                                      customerFullAddress={order.buyerAddress}
                                     />
                                     <button
                                       type="button"

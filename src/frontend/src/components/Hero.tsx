@@ -1,5 +1,9 @@
 import CategoryFeedSection from "@/components/CategoryFeedSection";
-import { useHomepageManager } from "@/context/HomepageManagerContext";
+import FlashSaleSection from "@/components/FlashSaleSection";
+import {
+  isBannerActive,
+  useHomepageManager,
+} from "@/context/HomepageManagerContext";
 import { PRODUCTS } from "@/data/products";
 import { addToHistory } from "@/utils/browsingHistory";
 import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
@@ -15,12 +19,13 @@ interface HeroProps {
 // ── Banner Carousel ──────────────────────────────────────────────────────────────────
 export function BannerCarousel() {
   const { banners } = useHomepageManager();
+  const activeBanners = banners.filter(isBannerActive);
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const count = banners.length;
+  const count = activeBanners.length;
 
   const next = useCallback(
     () => setCurrent((c) => (c + 1) % (count || 1)),
@@ -70,7 +75,7 @@ export function BannerCarousel() {
         className="flex transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
-        {banners.map((banner) => (
+        {activeBanners.map((banner) => (
           <div key={banner.id} className="w-full flex-shrink-0">
             <img
               src={banner.imageUrl}
@@ -82,7 +87,7 @@ export function BannerCarousel() {
         ))}
       </div>
       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
-        {banners.map((banner, i) => (
+        {activeBanners.map((banner, i) => (
           <button
             key={banner.id}
             type="button"
@@ -367,6 +372,10 @@ export default function Hero({
             onViewAll={onViewAll}
             onViewProduct={onViewProduct}
           />
+        );
+      case "flash_sale":
+        return (
+          <FlashSaleSection key="flash_sale" onViewProduct={onViewProduct} />
         );
       default:
         return null;

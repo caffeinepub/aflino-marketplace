@@ -89,11 +89,6 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface UserProfile {
-    name: string;
-    role: string;
-    email: string;
-}
 export interface Product {
     name: string;
     description: string;
@@ -101,29 +96,250 @@ export interface Product {
     category: string;
     price: bigint;
 }
+export interface WhatsAppLog {
+    id: bigint;
+    status: string;
+    recipient: string;
+    orderId: string;
+    messageType: string;
+    timestamp: bigint;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface SmtpConfig {
+    username: string;
+    fromEmail: string;
+    host: string;
+    password: string;
+    port: string;
+    enabled: boolean;
+    fromName: string;
+}
+export interface _CaffeineStorageRefillInformation {
+    proposed_top_up_amount?: bigint;
+}
+export interface EmailLog {
+    id: bigint;
+    status: string;
+    subject: string;
+    recipient: string;
+    orderId: string;
+    timestamp: bigint;
+    emailType: string;
+}
+export interface _CaffeineStorageCreateCertificateResult {
+    method: string;
+    blob_hash: string;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface WhatsAppConfig {
+    enabled: boolean;
+    accessToken: string;
+    phoneNumberId: string;
+    wabaId: string;
+}
+export interface CoinTransaction {
+    userId: string;
+    createdAt: bigint;
+    txId: string;
+    amount: bigint;
+    reason: string;
+}
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export interface ProductReview {
+    status: ReviewStatus;
+    userName: string;
+    photoUrls: Array<string>;
+    userId: string;
+    createdAt: bigint;
+    reviewText: string;
+    productId: string;
+    isVerifiedPurchase: boolean;
+    rating: bigint;
+    reviewId: string;
+}
+export interface UserProfile {
+    name: string;
+    role: string;
+    email: string;
+}
+export interface _CaffeineStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
+}
+export enum ReviewStatus {
+    pending = "pending",
+    approved = "approved",
+    rejected = "rejected"
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
 }
 export interface backendInterface {
+    _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
+    _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
+    _caffeineStorageConfirmBlobDeletion(blobs: Array<Uint8Array>): Promise<void>;
+    _caffeineStorageCreateCertificate(blobHash: string): Promise<_CaffeineStorageCreateCertificateResult>;
+    _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
+    _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    awardCoins(userId: string, amount: bigint, reason: string): Promise<void>;
     createProduct(name: string, price: bigint, description: string, category: string): Promise<bigint>;
+    createRazorpayOrder(amountPaise: bigint, receipt: string): Promise<string>;
     deleteProduct(productId: bigint): Promise<void>;
+    generateGatepassToken(orderId: string): Promise<string>;
+    getAesKey(): Promise<string>;
     getAllProducts(): Promise<Array<Product>>;
+    getApprovedReviews(productId: string): Promise<Array<ProductReview>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getCoinHistory(userId: string): Promise<Array<CoinTransaction>>;
+    getCustomerCoins(userId: string): Promise<bigint>;
+    getEmailLogs(): Promise<Array<EmailLog>>;
+    getPendingReviews(): Promise<Array<ProductReview>>;
     getProduct(productId: bigint): Promise<Product>;
+    getProductAverageRating(productId: string): Promise<{
+        averageRating: number;
+        reviewCount: bigint;
+    }>;
     getProductsBySeller(seller: Principal): Promise<Array<Product>>;
+    getRazorpayKeyId(): Promise<string>;
+    getSmtpConfig(): Promise<SmtpConfig>;
     getUserProfile(userId: Principal): Promise<UserProfile | null>;
+    getWhatsAppConfig(): Promise<WhatsAppConfig>;
+    getWhatsAppLogs(): Promise<Array<WhatsAppLog>>;
+    isAesKeyConfigured(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    isRazorpayConfigured(): Promise<boolean>;
+    logEmail(emailType: string, recipient: string, subject: string, orderId: string): Promise<bigint>;
+    moderateReview(reviewId: string, approve: boolean): Promise<{
+        newStatus: ReviewStatus;
+        coinsAwarded: bigint;
+    }>;
+    redeemCoinsAtCheckout(userId: string, orderId: string, coinsToRedeem: bigint): Promise<{
+        discountAmountPaise: bigint;
+        coinsRedeemed: bigint;
+    }>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    sendWhatsAppMessage(toPhone: string, messageType: string, orderId: string, customerName: string): Promise<string>;
+    setAesKey(keyHex: string): Promise<void>;
+    setRazorpayKeys(keyId: string, keySecret: string): Promise<void>;
+    setSmtpConfig(config: SmtpConfig): Promise<void>;
+    setWhatsAppConfig(config: WhatsAppConfig): Promise<void>;
+    submitReview(productId: string, userName: string, rating: bigint, reviewText: string, photoUrls: Array<string>, isVerifiedPurchase: boolean): Promise<string>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
     updateProduct(productId: bigint, product: Product): Promise<void>;
+    verifyAndConsumeGatepassToken(token: string): Promise<{
+        orderId: string;
+        message: string;
+        success: boolean;
+    }>;
+    verifyRazorpayPayment(razorpayPaymentId: string, expectedOrderId: string): Promise<boolean>;
 }
-import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { ProductReview as _ProductReview, ReviewStatus as _ReviewStatus, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
+    async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageBlobsToDelete();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageBlobsToDelete();
+            return result;
+        }
+    }
+    async _caffeineStorageConfirmBlobDeletion(arg0: Array<Uint8Array>): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageCreateCertificate(arg0: string): Promise<_CaffeineStorageCreateCertificateResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageRefillCashier(arg0: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+                return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+            return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async _caffeineStorageUpdateGatewayPrincipals(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+            return result;
+        }
+    }
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -141,14 +357,28 @@ export class Backend implements backendInterface {
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async awardCoins(arg0: string, arg1: bigint, arg2: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.awardCoins(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.awardCoins(arg0, arg1, arg2);
             return result;
         }
     }
@@ -166,6 +396,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createRazorpayOrder(arg0: bigint, arg1: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createRazorpayOrder(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createRazorpayOrder(arg0, arg1);
+            return result;
+        }
+    }
     async deleteProduct(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
@@ -177,6 +421,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.deleteProduct(arg0);
+            return result;
+        }
+    }
+    async generateGatepassToken(arg0: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.generateGatepassToken(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.generateGatepassToken(arg0);
+            return result;
+        }
+    }
+    async getAesKey(): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAesKey();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAesKey();
             return result;
         }
     }
@@ -194,32 +466,102 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getApprovedReviews(arg0: string): Promise<Array<ProductReview>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getApprovedReviews(arg0);
+                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getApprovedReviews(arg0);
+            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n16(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n16(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getCoinHistory(arg0: string): Promise<Array<CoinTransaction>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCoinHistory(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCoinHistory(arg0);
+            return result;
+        }
+    }
+    async getCustomerCoins(arg0: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCustomerCoins(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCustomerCoins(arg0);
+            return result;
+        }
+    }
+    async getEmailLogs(): Promise<Array<EmailLog>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getEmailLogs();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getEmailLogs();
+            return result;
+        }
+    }
+    async getPendingReviews(): Promise<Array<ProductReview>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPendingReviews();
+                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPendingReviews();
+            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProduct(arg0: bigint): Promise<Product> {
@@ -233,6 +575,23 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getProduct(arg0);
+            return result;
+        }
+    }
+    async getProductAverageRating(arg0: string): Promise<{
+        averageRating: number;
+        reviewCount: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getProductAverageRating(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getProductAverageRating(arg0);
             return result;
         }
     }
@@ -250,18 +609,88 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getRazorpayKeyId(): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getRazorpayKeyId();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getRazorpayKeyId();
+            return result;
+        }
+    }
+    async getSmtpConfig(): Promise<SmtpConfig> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getSmtpConfig();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSmtpConfig();
+            return result;
+        }
+    }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getWhatsAppConfig(): Promise<WhatsAppConfig> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWhatsAppConfig();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWhatsAppConfig();
+            return result;
+        }
+    }
+    async getWhatsAppLogs(): Promise<Array<WhatsAppLog>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWhatsAppLogs();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWhatsAppLogs();
+            return result;
+        }
+    }
+    async isAesKeyConfigured(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isAesKeyConfigured();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isAesKeyConfigured();
+            return result;
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -275,6 +704,68 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async isRazorpayConfigured(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isRazorpayConfigured();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isRazorpayConfigured();
+            return result;
+        }
+    }
+    async logEmail(arg0: string, arg1: string, arg2: string, arg3: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.logEmail(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.logEmail(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async moderateReview(arg0: string, arg1: boolean): Promise<{
+        newStatus: ReviewStatus;
+        coinsAwarded: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.moderateReview(arg0, arg1);
+                return from_candid_record_n18(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.moderateReview(arg0, arg1);
+            return from_candid_record_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async redeemCoinsAtCheckout(arg0: string, arg1: string, arg2: bigint): Promise<{
+        discountAmountPaise: bigint;
+        coinsRedeemed: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.redeemCoinsAtCheckout(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.redeemCoinsAtCheckout(arg0, arg1, arg2);
             return result;
         }
     }
@@ -292,6 +783,104 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async sendWhatsAppMessage(arg0: string, arg1: string, arg2: string, arg3: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendWhatsAppMessage(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendWhatsAppMessage(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async setAesKey(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setAesKey(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setAesKey(arg0);
+            return result;
+        }
+    }
+    async setRazorpayKeys(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setRazorpayKeys(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setRazorpayKeys(arg0, arg1);
+            return result;
+        }
+    }
+    async setSmtpConfig(arg0: SmtpConfig): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setSmtpConfig(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setSmtpConfig(arg0);
+            return result;
+        }
+    }
+    async setWhatsAppConfig(arg0: WhatsAppConfig): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setWhatsAppConfig(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setWhatsAppConfig(arg0);
+            return result;
+        }
+    }
+    async submitReview(arg0: string, arg1: string, arg2: bigint, arg3: string, arg4: Array<string>, arg5: boolean): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitReview(arg0, arg1, arg2, arg3, arg4, arg5);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.submitReview(arg0, arg1, arg2, arg3, arg4, arg5);
+            return result;
+        }
+    }
+    async transform(arg0: TransformationInput): Promise<TransformationOutput> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.transform(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.transform(arg0);
+            return result;
+        }
+    }
     async updateProduct(arg0: bigint, arg1: Product): Promise<void> {
         if (this.processError) {
             try {
@@ -306,14 +895,130 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async verifyAndConsumeGatepassToken(arg0: string): Promise<{
+        orderId: string;
+        message: string;
+        success: boolean;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.verifyAndConsumeGatepassToken(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.verifyAndConsumeGatepassToken(arg0);
+            return result;
+        }
+    }
+    async verifyRazorpayPayment(arg0: string, arg1: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.verifyRazorpayPayment(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.verifyRazorpayPayment(arg0, arg1);
+            return result;
+        }
+    }
 }
-function from_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n5(_uploadFile, _downloadFile, value);
+function from_candid_ProductReview_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ProductReview): ProductReview {
+    return from_candid_record_n12(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_ReviewStatus_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReviewStatus): ReviewStatus {
+    return from_candid_variant_n14(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n17(_uploadFile, _downloadFile, value);
+}
+function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
+    return from_candid_record_n5(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    status: _ReviewStatus;
+    userName: string;
+    photoUrls: Array<string>;
+    userId: string;
+    createdAt: bigint;
+    reviewText: string;
+    productId: string;
+    isVerifiedPurchase: boolean;
+    rating: bigint;
+    reviewId: string;
+}): {
+    status: ReviewStatus;
+    userName: string;
+    photoUrls: Array<string>;
+    userId: string;
+    createdAt: bigint;
+    reviewText: string;
+    productId: string;
+    isVerifiedPurchase: boolean;
+    rating: bigint;
+    reviewId: string;
+} {
+    return {
+        status: from_candid_ReviewStatus_n13(_uploadFile, _downloadFile, value.status),
+        userName: value.userName,
+        photoUrls: value.photoUrls,
+        userId: value.userId,
+        createdAt: value.createdAt,
+        reviewText: value.reviewText,
+        productId: value.productId,
+        isVerifiedPurchase: value.isVerifiedPurchase,
+        rating: value.rating,
+        reviewId: value.reviewId
+    };
+}
+function from_candid_record_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    newStatus: _ReviewStatus;
+    coinsAwarded: bigint;
+}): {
+    newStatus: ReviewStatus;
+    coinsAwarded: bigint;
+} {
+    return {
+        newStatus: from_candid_ReviewStatus_n13(_uploadFile, _downloadFile, value.newStatus),
+        coinsAwarded: value.coinsAwarded
+    };
+}
+function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    success: [] | [boolean];
+    topped_up_amount: [] | [bigint];
+}): {
+    success?: boolean;
+    topped_up_amount?: bigint;
+} {
+    return {
+        success: record_opt_to_undefined(from_candid_opt_n6(_uploadFile, _downloadFile, value.success)),
+        topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
+    };
+}
+function from_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    pending: null;
+} | {
+    approved: null;
+} | {
+    rejected: null;
+}): ReviewStatus {
+    return "pending" in value ? ReviewStatus.pending : "approved" in value ? ReviewStatus.approved : "rejected" in value ? ReviewStatus.rejected : value;
+}
+function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -322,10 +1027,28 @@ function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uin
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n2(_uploadFile, _downloadFile, value);
+function from_candid_vec_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ProductReview>): Array<ProductReview> {
+    return value.map((x)=>from_candid_ProductReview_n11(_uploadFile, _downloadFile, x));
 }
-function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n9(_uploadFile, _downloadFile, value);
+}
+function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation): __CaffeineStorageRefillInformation {
+    return to_candid_record_n3(_uploadFile, _downloadFile, value);
+}
+function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
+    return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
+}
+function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    proposed_top_up_amount?: bigint;
+}): {
+    proposed_top_up_amount: [] | [bigint];
+} {
+    return {
+        proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
+    };
+}
+function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;
 } | {
     user: null;

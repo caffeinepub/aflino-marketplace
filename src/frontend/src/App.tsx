@@ -5,6 +5,8 @@ import LocationModal from "@/components/LocationModal";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/CartContext";
+import { CustomerCoinProvider } from "@/context/CustomerCoinContext";
+import { FlashSaleProvider } from "@/context/FlashSaleContext";
 import {
   GeoLocationProvider,
   useGeoLocation,
@@ -13,9 +15,11 @@ import { HomepageManagerProvider } from "@/context/HomepageManagerContext";
 import type { Order } from "@/context/OrderTrackingContext";
 import { OrderTrackingProvider } from "@/context/OrderTrackingContext";
 import { ProductProvider } from "@/context/ProductContext";
+import { ReviewProvider } from "@/context/ReviewContext";
 import { RoleProvider, useRole } from "@/context/RoleContext";
 import { SellerProvider } from "@/context/SellerContext";
 import { WalletProvider } from "@/context/WalletContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 import AdminDashboard from "@/pages/AdminDashboard";
 import CheckoutPage from "@/pages/CheckoutPage";
 import CustomerDashboard from "@/pages/CustomerDashboard";
@@ -156,16 +160,24 @@ export default function App() {
       <GeoLocationProvider>
         <RoleProvider>
           <SellerProvider>
-            <WalletProvider>
-              <OrderTrackingProvider>
-                <CartProvider>
-                  <ProductProvider>
-                    <Toaster />
-                    <AppContent />
-                  </ProductProvider>
-                </CartProvider>
-              </OrderTrackingProvider>
-            </WalletProvider>
+            <WishlistProvider>
+              <ReviewProvider>
+                <CustomerCoinProvider>
+                  <WalletProvider>
+                    <OrderTrackingProvider>
+                      <CartProvider>
+                        <ProductProvider>
+                          <FlashSaleProvider>
+                            <Toaster />
+                            <AppContent />
+                          </FlashSaleProvider>
+                        </ProductProvider>
+                      </CartProvider>
+                    </OrderTrackingProvider>
+                  </WalletProvider>
+                </CustomerCoinProvider>
+              </ReviewProvider>
+            </WishlistProvider>
           </SellerProvider>
         </RoleProvider>
       </GeoLocationProvider>

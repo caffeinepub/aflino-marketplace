@@ -14,6 +14,8 @@ export interface HomepageBanner {
   title: string;
   redirectLink: string;
   order: number;
+  scheduleStart?: string; // ISO datetime string
+  scheduleEnd?: string; // ISO datetime string
 }
 
 export interface HomepageCategory {
@@ -43,9 +45,25 @@ export interface CategoryFeedConfig {
 
 export interface HomepageSection {
   id: string;
-  key: "banners" | "categories" | "brands" | "feeds" | "recently_viewed";
+  key:
+    | "banners"
+    | "categories"
+    | "brands"
+    | "feeds"
+    | "recently_viewed"
+    | "flash_sale";
   label: string;
   order: number;
+}
+
+/** Returns true if the banner should be shown right now */
+export function isBannerActive(banner: HomepageBanner): boolean {
+  const now = Date.now();
+  if (banner.scheduleStart && now < new Date(banner.scheduleStart).getTime())
+    return false;
+  if (banner.scheduleEnd && now >= new Date(banner.scheduleEnd).getTime())
+    return false;
+  return true;
 }
 
 const LS_BANNERS = "aflino_homepage_banners";
@@ -362,6 +380,7 @@ const DEFAULT_SECTIONS: HomepageSection[] = [
     label: "Recently Viewed Products",
     order: 4,
   },
+  { id: "s6", key: "flash_sale", label: "Flash Sale Section", order: 5 },
 ];
 
 function loadFromLS<T>(key: string, defaults: T[]): T[] {
@@ -392,7 +411,13 @@ interface HomepageManagerContextValue {
   categoryFeeds: CategoryFeedConfig[];
   homepageSections: HomepageSection[];
   uploadProgress: number;
-  addBanner: (file: File, title: string, link: string) => Promise<void>;
+  addBanner: (
+    file: File,
+    title: string,
+    link: string,
+    scheduleStart?: string,
+    scheduleEnd?: string,
+  ) => Promise<void>;
   updateBanner: (
     id: string,
     fields: Partial<Omit<HomepageBanner, "id">>,
@@ -445,7 +470,23 @@ export function HomepageManagerProvider({
     loadFromLS(LS_FEEDS, DEFAULT_FEEDS),
   );
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(
-    () => loadFromLS(LS_SECTIONS, DEFAULT_SECTIONS),
+    () => {
+      const stored = loadFromLS<HomepageSection>(LS_SECTIONS, DEFAULT_SECTIONS);
+      // Ensure flash_sale section exists
+      const hasFlashSale = stored.some((s) => s.key === "flash_sale");
+      if (!hasFlashSale) {
+        return [
+          ...stored,
+          {
+            id: "s6",
+            key: "flash_sale",
+            label: "Flash Sale Section",
+            order: stored.length,
+          },
+        ];
+      }
+      return stored;
+    },
   );
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -485,7 +526,13 @@ export function HomepageManagerProvider({
   }, []);
 
   const addBanner = useCallback(
-    async (file: File, title: string, link: string) => {
+    async (
+      file: File,
+      title: string,
+      link: string,
+      scheduleStart?: string,
+      scheduleEnd?: string,
+    ) => {
       const imageUrl = await uploadImage(file);
       setBanners((prev) => [
         ...prev,
@@ -495,6 +542,8 @@ export function HomepageManagerProvider({
           title,
           redirectLink: link,
           order: prev.length,
+          ...(scheduleStart ? { scheduleStart } : {}),
+          ...(scheduleEnd ? { scheduleEnd } : {}),
         },
       ]);
       toast.success("Banner added!");
@@ -588,9 +637,7 @@ export function HomepageManagerProvider({
   }, []);
 
   const uploadBrandLogo = useCallback(
-    async (file: File): Promise<string> => {
-      return uploadImage(file);
-    },
+    async (file: File): Promise<string> => uploadImage(file),
     [uploadImage],
   );
 

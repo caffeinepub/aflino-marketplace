@@ -9,6 +9,7 @@ import CommunicationSettings from "@/components/admin/CommunicationSettings";
 import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
 import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
 import PaymentSettingsTab from "@/components/admin/PaymentSettingsTab";
+import QRSecuritySection from "@/components/admin/QRSecuritySection";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useProducts } from "@/context/ProductContext";
+import { useReviews } from "@/context/ReviewContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
@@ -48,10 +50,12 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  MessageSquare,
   Package,
   Plus,
   Settings2,
   Shield,
+  Star,
   Trash2,
   Upload,
   Users,
@@ -71,7 +75,8 @@ type Tab =
   | "homepage"
   | "payment"
   | "communication"
-  | "brand";
+  | "brand"
+  | "reviews";
 
 interface AdminVariantRow {
   id: string;
@@ -123,6 +128,9 @@ export default function AdminDashboard() {
     getCategoryRate,
   } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>("vendors");
+  const { getPendingReviews, approveReview, rejectReview } = useReviews();
+  const pendingReviewsList = getPendingReviews();
+  const pendingReviewsCount = pendingReviewsList.length;
 
   // Admin product upload state
   const [adminProductName, setAdminProductName] = useState("");
@@ -436,6 +444,24 @@ export default function AdminDashboard() {
           >
             <Image className="w-4 h-4" />
             Brand Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("reviews")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "reviews"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.reviews.tab"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Reviews
+            {pendingReviewsCount > 0 && (
+              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-400 text-[10px] font-bold text-white">
+                {pendingReviewsCount}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -1517,7 +1543,8 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-6">
+                <div className="mt-6 space-y-6">
+                  <QRSecuritySection />
                   <CourierSettingsSection />
                 </div>
               </div>
@@ -1553,6 +1580,168 @@ export default function AdminDashboard() {
               <CommunicationSettings />
             </motion.div>
           )}
+          {activeTab === "reviews" && (
+            <motion.div
+              key="reviews"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    Review Moderation
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    Approve or reject customer reviews before they go live
+                  </p>
+                </div>
+                {pendingReviewsCount > 0 && (
+                  <span
+                    className="px-3 py-1.5 rounded-full text-sm font-bold text-white"
+                    style={{ backgroundColor: "#f97316" }}
+                  >
+                    {pendingReviewsCount} Pending
+                  </span>
+                )}
+              </div>
+
+              {pendingReviewsList.length === 0 ? (
+                <div
+                  className="flex flex-col items-center justify-center py-24 text-center"
+                  data-ocid="admin.reviews.empty_state"
+                >
+                  <MessageSquare className="w-14 h-14 text-gray-200 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-1">
+                    No Pending Reviews
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    All reviews have been moderated. Check back later!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4" data-ocid="admin.reviews.list">
+                  {pendingReviewsList.map((review, i) => (
+                    <div
+                      key={review.reviewId}
+                      className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs"
+                      data-ocid={`admin.reviews.item.${i + 1}`}
+                    >
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #006AFF, #EC008C)",
+                            }}
+                          >
+                            {review.userName.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-gray-900 text-sm">
+                                {review.userName}
+                              </p>
+                              {review.isVerifiedPurchase && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
+                                  ✓ Verified Purchase
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Product ID: {review.productId}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className="w-4 h-4"
+                              fill={s <= review.rating ? "#006AFF" : "none"}
+                              stroke={
+                                s <= review.rating ? "#006AFF" : "#d1d5db"
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-700 leading-relaxed mb-4 pl-13">
+                        {review.reviewText}
+                      </p>
+
+                      {/* Review photos */}
+                      {review.photoUrls.length > 0 && (
+                        <div className="flex gap-2 mb-4">
+                          {review.photoUrls.map((url) => (
+                            <a
+                              key={url}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 block flex-shrink-0 hover:opacity-90 transition-opacity"
+                            >
+                              <img
+                                src={url}
+                                alt="Review"
+                                className="w-full h-full object-cover"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="text-white font-semibold"
+                          style={{ backgroundColor: "#006AFF" }}
+                          onClick={() => {
+                            approveReview(review.reviewId);
+                            const coins = review.photoUrls.length * 5;
+                            if (coins > 0) {
+                              toast.success(
+                                `Review approved! ${coins} AFLINO Coins awarded to reviewer.`,
+                              );
+                            } else {
+                              toast.success("Review approved and published.");
+                            }
+                          }}
+                          data-ocid={`admin.reviews.approve.button.${i + 1}`}
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            rejectReview(review.reviewId);
+                            toast.success("Review rejected.");
+                          }}
+                          data-ocid={`admin.reviews.delete_button.${i + 1}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                        {review.photoUrls.length > 0 && (
+                          <span className="text-xs text-amber-700 ml-auto font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                            🪙 {review.photoUrls.length * 5} coins on approve
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {activeTab === "brand" && (
             <motion.div
               key="brand"

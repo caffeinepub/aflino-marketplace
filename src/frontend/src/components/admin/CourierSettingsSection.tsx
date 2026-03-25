@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Save, Truck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function CourierSettingsSection() {
@@ -16,11 +16,31 @@ export default function CourierSettingsSection() {
   });
   const [saved, setSaved] = useState(false);
 
+  // Load persisted keys on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("aflino_courier_keys");
+    if (stored) {
+      try {
+        const keys = JSON.parse(stored) as Record<string, string>;
+        if (keys.delhivery) setDelhivery(keys.delhivery);
+        if (keys.bluedart) setBluedart(keys.bluedart);
+        if (keys.shiprocket) setShiprocket(keys.shiprocket);
+        setSaved(true);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   const isConfigured = delhivery || bluedart || shiprocket;
 
   function handleSave() {
+    localStorage.setItem(
+      "aflino_courier_keys",
+      JSON.stringify({ delhivery, bluedart, shiprocket }),
+    );
     setSaved(true);
-    toast.success("Courier API keys saved (stored in session)");
+    toast.success("Courier API keys saved successfully");
   }
 
   type FieldId = "delhivery" | "bluedart" | "shiprocket";

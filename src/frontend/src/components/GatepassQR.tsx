@@ -5,7 +5,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapPin, Package, QrCode, X } from "lucide-react";
+import { useActor } from "@/hooks/useActor";
+import { Copy, Loader2, MapPin, Package, QrCode, X } from "lucide-react";
+const QRCode = (window as any).__QRCode ?? {
+  toDataURL: async (url: string, _opts?: unknown) => url,
+};
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface GatepassOrder {
   id: string;
@@ -23,30 +29,66 @@ interface Props {
 }
 
 export default function GatepassQR({ orderId, isOpen, onClose, order }: Props) {
-  const token = btoa(`${orderId}:${Date.now()}`);
-  const pickupUrl = `https://aflino.in/pickup/${token}`;
+  const { actor, isFetching } = useActor();
+  const [token, setToken] = useState<string | null>(null);
+  const [loadingToken, setLoadingToken] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [pickupUrl, setPickupUrl] = useState("");
 
-  const cells = 10;
-  const cellSize = 20;
-  const svgSize = cells * cellSize;
+  // Generate token when dialog opens
+  useEffect(() => {
+    if (!isOpen) {
+      setToken(null);
+      setQrDataUrl(null);
+      setPickupUrl("");
+      return;
+    }
+    if (!actor || isFetching) return;
 
-  function getCell(row: number, col: number): boolean {
-    const hash = (orderId.charCodeAt(row % orderId.length) * 31 + col * 17) % 7;
-    if (
-      (row < 3 && col < 3) ||
-      (row < 3 && col >= cells - 3) ||
-      (row >= cells - 3 && col < 3)
-    )
-      return true;
-    return hash < 4;
-  }
+    const actorAny = actor as any;
+    if (typeof actorAny.generateGatepassToken !== "function") {
+      // Fallback: generate a local token if backend function not available
+      const fallbackToken = btoa(`${orderId}:${Date.now()}`);
+      setToken(fallbackToken);
+      return;
+    }
 
-  const cellRects: { row: number; col: number }[] = [];
-  for (let row = 0; row < cells; row++) {
-    for (let col = 0; col < cells; col++) {
-      cellRects.push({ row, col });
+    setLoadingToken(true);
+    actorAny
+      .generateGatepassToken(orderId)
+      .then((tok: string) => {
+        setToken(tok);
+      })
+      .catch(() => {
+        // Fallback on error
+        const fallbackToken = btoa(`${orderId}:${Date.now()}`);
+        setToken(fallbackToken);
+        toast.error("Using local token (canister unavailable)");
+      })
+      .finally(() => {
+        setLoadingToken(false);
+      });
+  }, [isOpen, actor, isFetching, orderId]);
+
+  // Generate QR data URL when token changes
+  useEffect(() => {
+    if (!token) return;
+    const url = `${window.location.origin}/pickup/${token}`;
+    setPickupUrl(url);
+    QRCode.toDataURL(url, { width: 200, margin: 2 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null));
+  }, [token]);
+
+  function handleCopyUrl() {
+    if (pickupUrl) {
+      navigator.clipboard.writeText(pickupUrl).then(() => {
+        toast.success("Pickup URL copied to clipboard");
+      });
     }
   }
+
+  const isLoading = loadingToken || (isOpen && !token && isFetching);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -63,33 +105,59 @@ export default function GatepassQR({ orderId, isOpen, onClose, order }: Props) {
             Show this to courier staff to confirm pickup
           </p>
 
-          <div className="flex justify-center">
-            <div
-              className="border-4 rounded-lg p-3 bg-white shadow-inner"
-              style={{ borderColor: "#006AFF" }}
-            >
-              <svg
-                width={svgSize}
-                height={svgSize}
-                viewBox={`0 0 ${svgSize} ${svgSize}`}
-                className="block"
-                role="img"
-                aria-label="Pickup gatepass QR code"
-              >
-                <title>Pickup Gatepass QR Code</title>
-                {cellRects.map(({ row, col }) => (
-                  <rect
-                    key={`cell-${row}-${col}`}
-                    x={col * cellSize}
-                    y={row * cellSize}
-                    width={cellSize}
-                    height={cellSize}
-                    fill={getCell(row, col) ? "#006AFF" : "white"}
-                  />
-                ))}
-              </svg>
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2
+                className="w-8 h-8 animate-spin"
+                style={{ color: "#006AFF" }}
+              />
+              <p className="text-sm text-gray-500">
+                Generating secure token...
+              </p>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex justify-center">
+                <div
+                  className="border-4 rounded-lg p-3 bg-white shadow-inner"
+                  style={{ borderColor: "#006AFF" }}
+                >
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="Gatepass QR Code"
+                      className="w-48 h-48 block"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 flex items-center justify-center bg-gray-100 rounded">
+                      <QrCode className="w-16 h-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div
+                className="rounded-lg px-3 py-2 text-xs text-center flex items-center justify-between gap-2"
+                style={{ backgroundColor: "#EEF4FF", color: "#006AFF" }}
+              >
+                <span
+                  className="font-mono truncate text-left flex-1"
+                  style={{ fontSize: "10px" }}
+                >
+                  {pickupUrl || "---"}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className="shrink-0 hover:opacity-70 transition-opacity"
+                  title="Copy pickup URL"
+                  data-ocid="gatepass.copy_button"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </>
+          )}
 
           <div className="bg-gray-50 rounded-lg p-3 text-left space-y-1">
             <div className="flex items-center gap-2">
@@ -103,23 +171,13 @@ export default function GatepassQR({ orderId, isOpen, onClose, order }: Props) {
                 <MapPin className="w-4 h-4 text-pink-500 shrink-0" />
                 <span className="text-sm text-gray-600">
                   {order.buyerName}
-                  {order.buyerState ? ` — ${order.buyerState}` : ""}
+                  {order.buyerState ? ` \u2014 ${order.buyerState}` : ""}
                 </span>
               </div>
             )}
-            <p className="text-xs text-gray-400 truncate mt-1">
-              Token: {token.slice(0, 24)}...
+            <p className="text-xs text-gray-400 mt-1">
+              Valid for 24 hours · One-time use only
             </p>
-          </div>
-
-          <div
-            className="rounded-lg p-3 text-xs text-center"
-            style={{ backgroundColor: "#EEF4FF", color: "#006AFF" }}
-          >
-            Pickup URL:{" "}
-            <span className="font-mono break-all">
-              {pickupUrl.slice(0, 50)}...
-            </span>
           </div>
 
           <Button

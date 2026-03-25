@@ -5,11 +5,13 @@ declare global {
 }
 
 import { useCart } from "@/context/CartContext";
+import { useCustomerCoins } from "@/context/CustomerCoinContext";
 import { type Order, useOrderTracking } from "@/context/OrderTrackingContext";
 import {
   AlertCircle,
   ArrowLeft,
   CreditCard,
+  Gift,
   Loader2,
   Lock,
   ShoppingBag,
@@ -18,6 +20,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { logWhatsApp } from "../utils/communicationLogger";
 import { razorpayBackend } from "../utils/razorpayBackend";
+
+const MIN_COINS_TO_REDEEM = 5;
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -58,11 +62,19 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
   const [razorpayConfigured, setRazorpayConfigured] = useState<boolean | null>(
     null,
   );
+  const [applyCoins, setApplyCoins] = useState(false);
+  const { getCoinBalance, redeemCoins } = useCustomerCoins();
+  const userId = "demo-customer";
+  const coinBalance = getCoinBalance(userId);
+  const canUseCoins = coinBalance >= MIN_COINS_TO_REDEEM;
 
-  const total = cartItems.reduce(
+  const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
+  const coinDiscount =
+    applyCoins && canUseCoins ? Math.min(coinBalance, subtotal) : 0;
+  const total = Math.max(0, subtotal - coinDiscount);
 
   useEffect(() => {
     razorpayBackend
@@ -167,6 +179,9 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
               };
               addOrder(newOrder);
               clearCart();
+              if (applyCoins && canUseCoins && coinDiscount > 0) {
+                redeemCoins(userId, coinDiscount, orderId);
+              }
               logWhatsApp("order_placed", form.phone, orderId);
               onSuccess(newOrder);
             } else {
@@ -352,11 +367,104 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-100 mt-4 pt-4 flex justify-between">
-            <span className="font-bold text-gray-900">Total</span>
-            <span className="font-bold text-lg" style={{ color: "#006AFF" }}>
-              ₹{total.toLocaleString("en-IN")}
+          <div className="border-t border-gray-100 mt-4 pt-4 space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Subtotal</span>
+              <span>₹{subtotal.toLocaleString("en-IN")}</span>
+            </div>
+            {coinDiscount > 0 && (
+              <div className="flex justify-between text-sm font-medium text-green-600">
+                <span>AFLINO Coins Discount</span>
+                <span>-₹{coinDiscount.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1 border-t border-gray-100">
+              <span className="font-bold text-gray-900">Grand Total</span>
+              <span className="font-bold text-lg" style={{ color: "#006AFF" }}>
+                ₹{total.toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* AFLINO Rewards Section */}
+        <div
+          className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden"
+          data-ocid="checkout.coins.panel"
+        >
+          {/* Header bar */}
+          <div
+            className="flex items-center gap-2 px-5 py-3"
+            style={{
+              background: "linear-gradient(135deg, #f59e0b, #d97706)",
+            }}
+          >
+            <Gift className="w-5 h-5 text-white" />
+            <span className="font-bold text-white text-sm tracking-wide">
+              AFLINO Rewards
             </span>
+          </div>
+          <div className="p-5 space-y-3">
+            {/* Balance display */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-extrabold text-amber-600">
+                {coinBalance}
+              </span>
+              <span className="text-sm text-gray-600">
+                {coinBalance === 1 ? "Coin" : "Coins"} available
+                <span className="text-xs text-gray-400 ml-1">
+                  (1 Coin = ₹1)
+                </span>
+              </span>
+            </div>
+
+            {coinBalance === 0 && (
+              <p className="text-xs text-gray-500 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+                💡 Earn coins by submitting photo reviews on your purchases!
+              </p>
+            )}
+
+            {coinBalance > 0 && !canUseCoins && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+                You have {coinBalance} Coins. A minimum of {MIN_COINS_TO_REDEEM}{" "}
+                coins is required to apply a discount.
+              </p>
+            )}
+
+            {canUseCoins && (
+              <label
+                className="flex items-start gap-3 cursor-pointer group"
+                data-ocid="checkout.coins.checkbox"
+              >
+                <input
+                  type="checkbox"
+                  checked={applyCoins}
+                  onChange={(e) => setApplyCoins(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-amber-500 shrink-0"
+                />
+                <div>
+                  <span className="text-sm font-semibold text-gray-800 group-hover:text-amber-700 transition-colors">
+                    Apply Coins for Discount (1 Coin = ₹1)
+                  </span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Saves ₹
+                    {Math.min(coinBalance, subtotal).toLocaleString("en-IN")} on
+                    this order
+                  </p>
+                </div>
+              </label>
+            )}
+
+            {applyCoins && canUseCoins && (
+              <div className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2.5 border border-green-200 font-medium flex items-center gap-1.5">
+                🎉{" "}
+                <span>
+                  ₹{coinDiscount.toLocaleString("en-IN")} discount applied!
+                  Razorpay will charge{" "}
+                  <strong>₹{total.toLocaleString("en-IN")}</strong> only.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -563,8 +671,17 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
             </>
           ) : (
             <>
-              <CreditCard className="w-5 h-5" /> Pay ₹
-              {total.toLocaleString("en-IN")}
+              <CreditCard className="w-5 h-5" />
+              {coinDiscount > 0 ? (
+                <span>
+                  Pay ₹{total.toLocaleString("en-IN")}
+                  <span className="text-xs font-normal ml-1 opacity-80">
+                    (saved ₹{coinDiscount} with coins)
+                  </span>
+                </span>
+              ) : (
+                <span>Pay ₹{total.toLocaleString("en-IN")}</span>
+              )}
             </>
           )}
         </button>

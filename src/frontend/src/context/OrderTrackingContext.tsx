@@ -1,5 +1,5 @@
 import { useWallet } from "@/context/WalletContext";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type OrderStatus =
   | "Order Placed"
@@ -33,6 +33,8 @@ export interface Order {
   gstRate?: number;
   discount?: number;
   category?: string;
+  // Customer contact (for encrypted QR)
+  buyerPhone?: string;
 }
 
 interface OrderTrackingContextValue {
@@ -50,12 +52,13 @@ const INITIAL_ORDERS: Order[] = [
     id: "ORD-10482",
     product: "Wireless Bluetooth Headphones",
     date: "Mar 18, 2026",
-    amount: "₹2,499",
+    amount: "\u20B92,499",
     amountRaw: 2499,
     status: "Delivered",
     sellerEmail: "techzone@aflino.com",
     sellerName: "TechZone Store",
     buyerName: "Rahul Sharma",
+    buyerPhone: "+91-98765-43210",
     buyerAddress: "45 Andheri West, Mumbai - 400058",
     buyerState: "Maharashtra",
     buyerPincode: "400058",
@@ -73,14 +76,15 @@ const INITIAL_ORDERS: Order[] = [
   },
   {
     id: "ORD-10391",
-    product: "Men's Running Shoes – Size 42",
+    product: "Men's Running Shoes \u2013 Size 42",
     date: "Mar 12, 2026",
-    amount: "₹3,199",
+    amount: "\u20B93,199",
     amountRaw: 3199,
     status: "Out for Delivery",
     sellerEmail: "fashionhub@aflino.com",
     sellerName: "Fashion Hub",
     buyerName: "Priya Mehta",
+    buyerPhone: "+91-91234-56789",
     buyerAddress: "B-12, Lajpat Nagar Phase II, New Delhi - 110024",
     buyerState: "Delhi",
     buyerPincode: "110024",
@@ -99,12 +103,13 @@ const INITIAL_ORDERS: Order[] = [
     id: "ORD-10267",
     product: "Stainless Steel Water Bottle 1L",
     date: "Mar 5, 2026",
-    amount: "₹649",
+    amount: "\u20B9649",
     amountRaw: 649,
     status: "Shipped",
     sellerEmail: "techzone@aflino.com",
     sellerName: "TechZone Store",
     buyerName: "Arjun Nair",
+    buyerPhone: "+91-90000-12345",
     buyerAddress: "Plot 7, Sector 15, Navi Mumbai - 400614",
     buyerState: "Maharashtra",
     buyerPincode: "400614",
@@ -122,11 +127,67 @@ const INITIAL_ORDERS: Order[] = [
   },
 ];
 
+const STORAGE_KEY = "aflino_orders";
+
+function loadOrdersFromStorage(): Order[] | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as Order[];
+  } catch {
+    return null;
+  }
+}
+
+function saveOrdersToStorage(orders: Order[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/**
+ * Non-hook helper for PickupConfirmationPage (runs outside React context).
+ * Directly updates order status in localStorage.
+ */
+export function updateOrderStatusInStorage(
+  orderId: string,
+  status: OrderStatus,
+): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return false;
+    const orders: Order[] = JSON.parse(stored);
+    let found = false;
+    const updated = orders.map((o) => {
+      if (o.id === orderId) {
+        found = true;
+        return { ...o, status };
+      }
+      return o;
+    });
+    if (found) localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return found;
+  } catch {
+    return false;
+  }
+}
+
 export function OrderTrackingProvider({
   children,
 }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const stored = loadOrdersFromStorage();
+    if (stored && stored.length > 0) return stored;
+    return INITIAL_ORDERS;
+  });
   const { addWalletEntry } = useWallet();
+
+  // Persist to localStorage whenever orders change
+  useEffect(() => {
+    saveOrdersToStorage(orders);
+  }, [orders]);
 
   const updateOrderStatus = (id: string, status: OrderStatus) => {
     setOrders((prev) =>

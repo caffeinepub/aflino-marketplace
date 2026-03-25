@@ -8,6 +8,17 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  'method' : IDL.Text,
+  'blob_hash' : IDL.Text,
+});
+export const _CaffeineStorageRefillInformation = IDL.Record({
+  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const _CaffeineStorageRefillResult = IDL.Record({
+  'success' : IDL.Opt(IDL.Bool),
+  'topped_up_amount' : IDL.Opt(IDL.Nat),
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -20,43 +31,233 @@ export const Product = IDL.Record({
   'category' : IDL.Text,
   'price' : IDL.Nat,
 });
+export const ReviewStatus = IDL.Variant({
+  'pending' : IDL.Null,
+  'approved' : IDL.Null,
+  'rejected' : IDL.Null,
+});
+export const ProductReview = IDL.Record({
+  'status' : ReviewStatus,
+  'userName' : IDL.Text,
+  'photoUrls' : IDL.Vec(IDL.Text),
+  'userId' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'reviewText' : IDL.Text,
+  'productId' : IDL.Text,
+  'isVerifiedPurchase' : IDL.Bool,
+  'rating' : IDL.Nat,
+  'reviewId' : IDL.Text,
+});
 export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'role' : IDL.Text,
   'email' : IDL.Text,
 });
+export const CoinTransaction = IDL.Record({
+  'userId' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'txId' : IDL.Text,
+  'amount' : IDL.Int,
+  'reason' : IDL.Text,
+});
+export const EmailLog = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : IDL.Text,
+  'subject' : IDL.Text,
+  'recipient' : IDL.Text,
+  'orderId' : IDL.Text,
+  'timestamp' : IDL.Nat,
+  'emailType' : IDL.Text,
+});
+export const SmtpConfig = IDL.Record({
+  'username' : IDL.Text,
+  'fromEmail' : IDL.Text,
+  'host' : IDL.Text,
+  'password' : IDL.Text,
+  'port' : IDL.Text,
+  'enabled' : IDL.Bool,
+  'fromName' : IDL.Text,
+});
+export const WhatsAppConfig = IDL.Record({
+  'enabled' : IDL.Bool,
+  'accessToken' : IDL.Text,
+  'phoneNumberId' : IDL.Text,
+  'wabaId' : IDL.Text,
+});
+export const WhatsAppLog = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : IDL.Text,
+  'recipient' : IDL.Text,
+  'orderId' : IDL.Text,
+  'messageType' : IDL.Text,
+  'timestamp' : IDL.Nat,
+});
+export const http_header = IDL.Record({
+  'value' : IDL.Text,
+  'name' : IDL.Text,
+});
+export const http_request_result = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
+export const TransformationInput = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : http_request_result,
+});
+export const TransformationOutput = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
 
 export const idlService = IDL.Service({
+  '_caffeineStorageBlobIsLive' : IDL.Func(
+      [IDL.Vec(IDL.Nat8)],
+      [IDL.Bool],
+      ['query'],
+    ),
+  '_caffeineStorageBlobsToDelete' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [],
+      [],
+    ),
+  '_caffeineStorageCreateCertificate' : IDL.Func(
+      [IDL.Text],
+      [_CaffeineStorageCreateCertificateResult],
+      [],
+    ),
+  '_caffeineStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_CaffeineStorageRefillInformation)],
+      [_CaffeineStorageRefillResult],
+      [],
+    ),
+  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'awardCoins' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
   'createProduct' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
       [IDL.Nat],
       [],
     ),
+  'createRazorpayOrder' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Text], []),
   'deleteProduct' : IDL.Func([IDL.Nat], [], []),
+  'generateGatepassToken' : IDL.Func([IDL.Text], [IDL.Text], []),
+  'getAesKey' : IDL.Func([], [IDL.Text], ['query']),
   'getAllProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+  'getApprovedReviews' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(ProductReview)],
+      ['query'],
+    ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getCoinHistory' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(CoinTransaction)],
+      ['query'],
+    ),
+  'getCustomerCoins' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),
+  'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
+  'getPendingReviews' : IDL.Func([], [IDL.Vec(ProductReview)], ['query']),
   'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
+  'getProductAverageRating' : IDL.Func(
+      [IDL.Text],
+      [IDL.Record({ 'averageRating' : IDL.Float64, 'reviewCount' : IDL.Nat })],
+      ['query'],
+    ),
   'getProductsBySeller' : IDL.Func(
       [IDL.Principal],
       [IDL.Vec(Product)],
       ['query'],
     ),
+  'getRazorpayKeyId' : IDL.Func([], [IDL.Text], ['query']),
+  'getSmtpConfig' : IDL.Func([], [SmtpConfig], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'getWhatsAppConfig' : IDL.Func([], [WhatsAppConfig], ['query']),
+  'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
+  'isAesKeyConfigured' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isRazorpayConfigured' : IDL.Func([], [IDL.Bool], ['query']),
+  'logEmail' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
+  'moderateReview' : IDL.Func(
+      [IDL.Text, IDL.Bool],
+      [IDL.Record({ 'newStatus' : ReviewStatus, 'coinsAwarded' : IDL.Nat })],
+      [],
+    ),
+  'redeemCoinsAtCheckout' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Nat],
+      [
+        IDL.Record({
+          'discountAmountPaise' : IDL.Nat,
+          'coinsRedeemed' : IDL.Nat,
+        }),
+      ],
+      [],
+    ),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'sendWhatsAppMessage' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text],
+      [],
+    ),
+  'setAesKey' : IDL.Func([IDL.Text], [], []),
+  'setRazorpayKeys' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'setSmtpConfig' : IDL.Func([SmtpConfig], [], []),
+  'setWhatsAppConfig' : IDL.Func([WhatsAppConfig], [], []),
+  'submitReview' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Vec(IDL.Text), IDL.Bool],
+      [IDL.Text],
+      [],
+    ),
+  'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
   'updateProduct' : IDL.Func([IDL.Nat, Product], [], []),
+  'verifyAndConsumeGatepassToken' : IDL.Func(
+      [IDL.Text],
+      [
+        IDL.Record({
+          'orderId' : IDL.Text,
+          'message' : IDL.Text,
+          'success' : IDL.Bool,
+        }),
+      ],
+      [],
+    ),
+  'verifyRazorpayPayment' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
+  const _CaffeineStorageRefillInformation = IDL.Record({
+    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const _CaffeineStorageRefillResult = IDL.Record({
+    'success' : IDL.Opt(IDL.Bool),
+    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -69,38 +270,219 @@ export const idlFactory = ({ IDL }) => {
     'category' : IDL.Text,
     'price' : IDL.Nat,
   });
+  const ReviewStatus = IDL.Variant({
+    'pending' : IDL.Null,
+    'approved' : IDL.Null,
+    'rejected' : IDL.Null,
+  });
+  const ProductReview = IDL.Record({
+    'status' : ReviewStatus,
+    'userName' : IDL.Text,
+    'photoUrls' : IDL.Vec(IDL.Text),
+    'userId' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'reviewText' : IDL.Text,
+    'productId' : IDL.Text,
+    'isVerifiedPurchase' : IDL.Bool,
+    'rating' : IDL.Nat,
+    'reviewId' : IDL.Text,
+  });
   const UserProfile = IDL.Record({
     'name' : IDL.Text,
     'role' : IDL.Text,
     'email' : IDL.Text,
   });
+  const CoinTransaction = IDL.Record({
+    'userId' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'txId' : IDL.Text,
+    'amount' : IDL.Int,
+    'reason' : IDL.Text,
+  });
+  const EmailLog = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : IDL.Text,
+    'subject' : IDL.Text,
+    'recipient' : IDL.Text,
+    'orderId' : IDL.Text,
+    'timestamp' : IDL.Nat,
+    'emailType' : IDL.Text,
+  });
+  const SmtpConfig = IDL.Record({
+    'username' : IDL.Text,
+    'fromEmail' : IDL.Text,
+    'host' : IDL.Text,
+    'password' : IDL.Text,
+    'port' : IDL.Text,
+    'enabled' : IDL.Bool,
+    'fromName' : IDL.Text,
+  });
+  const WhatsAppConfig = IDL.Record({
+    'enabled' : IDL.Bool,
+    'accessToken' : IDL.Text,
+    'phoneNumberId' : IDL.Text,
+    'wabaId' : IDL.Text,
+  });
+  const WhatsAppLog = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : IDL.Text,
+    'recipient' : IDL.Text,
+    'orderId' : IDL.Text,
+    'messageType' : IDL.Text,
+    'timestamp' : IDL.Nat,
+  });
+  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const http_request_result = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
+  const TransformationInput = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : http_request_result,
+  });
+  const TransformationOutput = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
   
   return IDL.Service({
+    '_caffeineStorageBlobIsLive' : IDL.Func(
+        [IDL.Vec(IDL.Nat8)],
+        [IDL.Bool],
+        ['query'],
+      ),
+    '_caffeineStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_caffeineStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [_CaffeineStorageCreateCertificateResult],
+        [],
+      ),
+    '_caffeineStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_CaffeineStorageRefillInformation)],
+        [_CaffeineStorageRefillResult],
+        [],
+      ),
+    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'awardCoins' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
     'createProduct' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
         [IDL.Nat],
         [],
       ),
+    'createRazorpayOrder' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Text], []),
     'deleteProduct' : IDL.Func([IDL.Nat], [], []),
+    'generateGatepassToken' : IDL.Func([IDL.Text], [IDL.Text], []),
+    'getAesKey' : IDL.Func([], [IDL.Text], ['query']),
     'getAllProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+    'getApprovedReviews' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(ProductReview)],
+        ['query'],
+      ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getCoinHistory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CoinTransaction)],
+        ['query'],
+      ),
+    'getCustomerCoins' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),
+    'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
+    'getPendingReviews' : IDL.Func([], [IDL.Vec(ProductReview)], ['query']),
     'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
+    'getProductAverageRating' : IDL.Func(
+        [IDL.Text],
+        [
+          IDL.Record({
+            'averageRating' : IDL.Float64,
+            'reviewCount' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
     'getProductsBySeller' : IDL.Func(
         [IDL.Principal],
         [IDL.Vec(Product)],
         ['query'],
       ),
+    'getRazorpayKeyId' : IDL.Func([], [IDL.Text], ['query']),
+    'getSmtpConfig' : IDL.Func([], [SmtpConfig], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'getWhatsAppConfig' : IDL.Func([], [WhatsAppConfig], ['query']),
+    'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
+    'isAesKeyConfigured' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isRazorpayConfigured' : IDL.Func([], [IDL.Bool], ['query']),
+    'logEmail' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
+    'moderateReview' : IDL.Func(
+        [IDL.Text, IDL.Bool],
+        [IDL.Record({ 'newStatus' : ReviewStatus, 'coinsAwarded' : IDL.Nat })],
+        [],
+      ),
+    'redeemCoinsAtCheckout' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Nat],
+        [
+          IDL.Record({
+            'discountAmountPaise' : IDL.Nat,
+            'coinsRedeemed' : IDL.Nat,
+          }),
+        ],
+        [],
+      ),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'sendWhatsAppMessage' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text],
+        [],
+      ),
+    'setAesKey' : IDL.Func([IDL.Text], [], []),
+    'setRazorpayKeys' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'setSmtpConfig' : IDL.Func([SmtpConfig], [], []),
+    'setWhatsAppConfig' : IDL.Func([WhatsAppConfig], [], []),
+    'submitReview' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Vec(IDL.Text), IDL.Bool],
+        [IDL.Text],
+        [],
+      ),
+    'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
     'updateProduct' : IDL.Func([IDL.Nat, Product], [], []),
+    'verifyAndConsumeGatepassToken' : IDL.Func(
+        [IDL.Text],
+        [
+          IDL.Record({
+            'orderId' : IDL.Text,
+            'message' : IDL.Text,
+            'success' : IDL.Bool,
+          }),
+        ],
+        [],
+      ),
+    'verifyRazorpayPayment' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
   });
 };
 

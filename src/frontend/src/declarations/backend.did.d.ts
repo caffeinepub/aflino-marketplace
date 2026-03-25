@@ -10,12 +10,61 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface CoinTransaction {
+  'userId' : string,
+  'createdAt' : bigint,
+  'txId' : string,
+  'amount' : bigint,
+  'reason' : string,
+}
+export interface EmailLog {
+  'id' : bigint,
+  'status' : string,
+  'subject' : string,
+  'recipient' : string,
+  'orderId' : string,
+  'timestamp' : bigint,
+  'emailType' : string,
+}
 export interface Product {
   'name' : string,
   'description' : string,
   'seller' : Principal,
   'category' : string,
   'price' : bigint,
+}
+export interface ProductReview {
+  'status' : ReviewStatus,
+  'userName' : string,
+  'photoUrls' : Array<string>,
+  'userId' : string,
+  'createdAt' : bigint,
+  'reviewText' : string,
+  'productId' : string,
+  'isVerifiedPurchase' : boolean,
+  'rating' : bigint,
+  'reviewId' : string,
+}
+export type ReviewStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null };
+export interface SmtpConfig {
+  'username' : string,
+  'fromEmail' : string,
+  'host' : string,
+  'password' : string,
+  'port' : string,
+  'enabled' : boolean,
+  'fromName' : string,
+}
+export interface TransformationInput {
+  'context' : Uint8Array,
+  'response' : http_request_result,
+}
+export interface TransformationOutput {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
 }
 export interface UserProfile {
   'name' : string,
@@ -25,20 +74,109 @@ export interface UserProfile {
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface WhatsAppConfig {
+  'enabled' : boolean,
+  'accessToken' : string,
+  'phoneNumberId' : string,
+  'wabaId' : string,
+}
+export interface WhatsAppLog {
+  'id' : bigint,
+  'status' : string,
+  'recipient' : string,
+  'orderId' : string,
+  'messageType' : string,
+  'timestamp' : bigint,
+}
+export interface _CaffeineStorageCreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
+export interface _CaffeineStorageRefillInformation {
+  'proposed_top_up_amount' : [] | [bigint],
+}
+export interface _CaffeineStorageRefillResult {
+  'success' : [] | [boolean],
+  'topped_up_amount' : [] | [bigint],
+}
+export interface http_header { 'value' : string, 'name' : string }
+export interface http_request_result {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface _SERVICE {
+  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
+  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array>],
+    undefined
+  >,
+  '_caffeineStorageCreateCertificate' : ActorMethod<
+    [string],
+    _CaffeineStorageCreateCertificateResult
+  >,
+  '_caffeineStorageRefillCashier' : ActorMethod<
+    [[] | [_CaffeineStorageRefillInformation]],
+    _CaffeineStorageRefillResult
+  >,
+  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'awardCoins' : ActorMethod<[string, bigint, string], undefined>,
   'createProduct' : ActorMethod<[string, bigint, string, string], bigint>,
+  'createRazorpayOrder' : ActorMethod<[bigint, string], string>,
   'deleteProduct' : ActorMethod<[bigint], undefined>,
+  'generateGatepassToken' : ActorMethod<[string], string>,
+  'getAesKey' : ActorMethod<[], string>,
   'getAllProducts' : ActorMethod<[], Array<Product>>,
+  'getApprovedReviews' : ActorMethod<[string], Array<ProductReview>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCoinHistory' : ActorMethod<[string], Array<CoinTransaction>>,
+  'getCustomerCoins' : ActorMethod<[string], bigint>,
+  'getEmailLogs' : ActorMethod<[], Array<EmailLog>>,
+  'getPendingReviews' : ActorMethod<[], Array<ProductReview>>,
   'getProduct' : ActorMethod<[bigint], Product>,
+  'getProductAverageRating' : ActorMethod<
+    [string],
+    { 'averageRating' : number, 'reviewCount' : bigint }
+  >,
   'getProductsBySeller' : ActorMethod<[Principal], Array<Product>>,
+  'getRazorpayKeyId' : ActorMethod<[], string>,
+  'getSmtpConfig' : ActorMethod<[], SmtpConfig>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getWhatsAppConfig' : ActorMethod<[], WhatsAppConfig>,
+  'getWhatsAppLogs' : ActorMethod<[], Array<WhatsAppLog>>,
+  'isAesKeyConfigured' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isRazorpayConfigured' : ActorMethod<[], boolean>,
+  'logEmail' : ActorMethod<[string, string, string, string], bigint>,
+  'moderateReview' : ActorMethod<
+    [string, boolean],
+    { 'newStatus' : ReviewStatus, 'coinsAwarded' : bigint }
+  >,
+  'redeemCoinsAtCheckout' : ActorMethod<
+    [string, string, bigint],
+    { 'discountAmountPaise' : bigint, 'coinsRedeemed' : bigint }
+  >,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'sendWhatsAppMessage' : ActorMethod<[string, string, string, string], string>,
+  'setAesKey' : ActorMethod<[string], undefined>,
+  'setRazorpayKeys' : ActorMethod<[string, string], undefined>,
+  'setSmtpConfig' : ActorMethod<[SmtpConfig], undefined>,
+  'setWhatsAppConfig' : ActorMethod<[WhatsAppConfig], undefined>,
+  'submitReview' : ActorMethod<
+    [string, string, bigint, string, Array<string>, boolean],
+    string
+  >,
+  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'updateProduct' : ActorMethod<[bigint, Product], undefined>,
+  'verifyAndConsumeGatepassToken' : ActorMethod<
+    [string],
+    { 'orderId' : string, 'message' : string, 'success' : boolean }
+  >,
+  'verifyRazorpayPayment' : ActorMethod<[string, string], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

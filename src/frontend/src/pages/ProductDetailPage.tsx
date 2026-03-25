@@ -1,20 +1,35 @@
+import AuthModal, { type AuthView } from "@/components/AuthModal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/context/CartContext";
+import { useCustomerCoins } from "@/context/CustomerCoinContext";
 import { useProducts } from "@/context/ProductContext";
+import { useReviews } from "@/context/ReviewContext";
+import { useRole } from "@/context/RoleContext";
+import { useWishlist } from "@/context/WishlistContext";
 import type { Product, ProductVariant } from "@/data/products";
 import { addToHistory, getHistory } from "@/utils/browsingHistory";
 import {
   ArrowLeft,
+  Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Coins,
+  Heart,
   Package,
   Play,
   Plus,
+  Send,
   ShoppingCart,
   Star,
+  X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -248,12 +263,413 @@ interface Props {
   onNavigateToProduct: (id: number) => void;
 }
 
+function StarPicker({
+  value,
+  onChange,
+}: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <fieldset className="flex gap-1" aria-label="Star rating">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onChange(s)}
+          onMouseEnter={() => setHover(s)}
+          onMouseLeave={() => setHover(0)}
+          className="p-0.5 transition-transform hover:scale-110"
+          aria-label={`${s} star${s > 1 ? "s" : ""}`}
+        >
+          <Star
+            className="w-6 h-6"
+            fill={(hover || value) >= s ? AFLINO_BLUE : "none"}
+            stroke={(hover || value) >= s ? AFLINO_BLUE : "#d1d5db"}
+          />
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+function CustomerReviewSection({
+  productId,
+  role,
+}: { productId: string; role: string | null }) {
+  const { getApprovedReviews, getProductAverageRating, submitReview } =
+    useReviews();
+  const { addCoins } = useCustomerCoins();
+  const [showForm, setShowForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [photos, setPhotos] = useState<{ file: File; url: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const approvedReviews = getApprovedReviews(productId);
+  const { averageRating, reviewCount } = getProductAverageRating(productId);
+  const allPhotos = approvedReviews.flatMap((r) => r.photoUrls);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    const remaining = 3 - photos.length;
+    const toAdd = files.slice(0, remaining);
+    for (const file of toAdd) {
+      const url = URL.createObjectURL(file);
+      setPhotos((prev) => [...prev, { file, url }]);
+    }
+    if (e.target) e.target.value = "";
+  }
+
+  function removePhoto(idx: number) {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[idx].url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (rating === 0) {
+      toast.error("Please select a star rating");
+      return;
+    }
+    if (!reviewText.trim()) {
+      toast.error("Please write a review");
+      return;
+    }
+    setSubmitting(true);
+    // Simulate upload delay
+    await new Promise((r) => setTimeout(r, 800));
+    const photoUrls = photos.map((p) => p.url);
+    const userId = `customer-${Date.now()}`;
+    submitReview({
+      productId,
+      userId,
+      userName: "You",
+      rating,
+      reviewText: reviewText.trim(),
+      photoUrls,
+      isVerifiedPurchase: false,
+    });
+    if (photos.length > 0) {
+      const coinsEarned = photos.length * 5;
+      addCoins(
+        userId,
+        coinsEarned,
+        `Photo review reward (${photos.length} photo${photos.length > 1 ? "s" : ""})`,
+      );
+      toast.success(
+        `Review submitted! You earned ${coinsEarned} AFLINO Coins 🪙`,
+      );
+    } else {
+      toast.success("Review submitted for moderation!");
+    }
+    setSubmitting(false);
+    setSubmitted(true);
+    setShowForm(false);
+    setRating(0);
+    setReviewText("");
+    setPhotos([]);
+  }
+
+  function formatDate(ts: number) {
+    return new Date(ts).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  return (
+    <section className="border-t border-gray-100 py-6 mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold" style={{ color: AFLINO_BLUE }}>
+          Customer Reviews
+        </h2>
+        {reviewCount > 0 && (
+          <span
+            className="text-sm font-semibold"
+            style={{ color: AFLINO_BLUE }}
+          >
+            {averageRating.toFixed(1)} ★ · {reviewCount} review
+            {reviewCount !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Customer Photos */}
+      {allPhotos.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-gray-500 mb-2">
+            Customer Photos
+          </p>
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+            {allPhotos.map((url) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setExpandedPhoto(url)}
+                className="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200 hover:opacity-90 transition-opacity"
+              >
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reviews List */}
+      {approvedReviews.length === 0 ? (
+        <div className="text-center py-10 text-gray-400">
+          <Star className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+          <p className="text-sm">No reviews yet. Be the first to review!</p>
+        </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+          {approvedReviews.map((review) => (
+            <div
+              key={review.reviewId}
+              className="rounded-xl border border-gray-100 p-4 bg-white shadow-xs flex-shrink-0"
+              style={{ width: 280 }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg, #006AFF, #EC008C)",
+                  }}
+                >
+                  {review.userName.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {review.userName}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {formatDate(review.createdAt)}
+                  </p>
+                </div>
+                {review.isVerifiedPurchase && (
+                  <span className="ml-auto flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Verified
+                  </span>
+                )}
+              </div>
+              {/* Stars */}
+              <div className="flex gap-0.5 mb-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className="w-3.5 h-3.5"
+                    fill={s <= review.rating ? AFLINO_BLUE : "none"}
+                    stroke={s <= review.rating ? AFLINO_BLUE : "#d1d5db"}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+                {review.reviewText}
+              </p>
+              {/* Review photos */}
+              {review.photoUrls.length > 0 && (
+                <div className="flex gap-1.5 mt-3">
+                  {review.photoUrls.map((url) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => setExpandedPhoto(url)}
+                      className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 hover:opacity-90 transition-opacity"
+                    >
+                      <img
+                        src={url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Write Review */}
+      <div className="mt-5">
+        {!role ? (
+          <p className="text-sm text-gray-400 text-center py-4">
+            <span className="font-medium" style={{ color: AFLINO_BLUE }}>
+              Login
+            </span>{" "}
+            to write a review and earn AFLINO Coins 🪙
+          </p>
+        ) : submitted ? (
+          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-xl p-3 border border-green-200">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            Review submitted for moderation! You'll be notified once approved.
+          </div>
+        ) : !showForm ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: AFLINO_BLUE }}
+            data-ocid="product.write_review.button"
+          >
+            <Star className="w-4 h-4" />
+            Write a Review · Earn Coins 🪙
+          </button>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-4"
+            data-ocid="review.form"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">Your Review</p>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="p-1 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            {/* Star picker */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-2">
+                Rating *
+              </p>
+              <StarPicker value={rating} onChange={setRating} />
+            </div>
+            {/* Text */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-2">
+                Your Experience *
+              </p>
+              <Textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="Share your honest experience with this product..."
+                className="resize-none text-sm"
+                rows={3}
+                data-ocid="review.textarea"
+              />
+            </div>
+            {/* Photo upload */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-2">
+                Add Photos (up to 3) ·{" "}
+                <span className="text-amber-600 font-bold">
+                  Earn 5 AFLINO Coins per photo!
+                </span>
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {photos.map((p) => (
+                  <div
+                    key={p.url}
+                    className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0"
+                  >
+                    <img
+                      src={p.url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(photos.indexOf(p))}
+                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center"
+                    >
+                      <X className="w-2.5 h-2.5 text-white" />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 hover:border-blue-400 transition-colors flex-shrink-0"
+                    data-ocid="review.upload_button"
+                  >
+                    <Camera className="w-5 h-5 text-gray-400" />
+                    <span className="text-[10px] text-gray-400">Add</span>
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </div>
+            {/* Coin reminder */}
+            {photos.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                <Coins className="w-3.5 h-3.5 flex-shrink-0" />
+                You'll earn {photos.length * 5} AFLINO Coins for this review!
+              </div>
+            )}
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full text-white font-semibold text-sm"
+              style={{ backgroundColor: AFLINO_BLUE }}
+              data-ocid="review.submit_button"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">Uploading...</span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Send className="w-4 h-4" />
+                  Submit Review
+                </span>
+              )}
+            </Button>
+          </form>
+        )}
+      </div>
+
+      {/* Photo lightbox */}
+      {expandedPhoto && (
+        <dialog
+          open
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 border-0 max-w-none w-full h-full m-0"
+          aria-modal="true"
+          data-ocid="review.photo.modal"
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+            onClick={() => setExpandedPhoto(null)}
+            data-ocid="review.photo.close_button"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          <img
+            src={expandedPhoto}
+            alt=""
+            className="max-w-full max-h-[85vh] rounded-xl object-contain"
+          />
+        </dialog>
+      )}
+    </section>
+  );
+}
+
 export default function ProductDetailPage({
   productId,
   onBack,
   onNavigateToProduct,
 }: Props) {
   const { addToCart } = useCart();
+  const { role } = useRole();
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const [authView, setAuthView] = useState<AuthView>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -527,6 +943,36 @@ export default function ProductDetailPage({
                     </span>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isLoggedIn = role !== null;
+                    toggleWishlist(product!.id, isLoggedIn, () =>
+                      setAuthView("login"),
+                    );
+                  }}
+                  data-ocid="product.wishlist.toggle"
+                  className="absolute bottom-3 right-3 z-10 p-2 rounded-full shadow-md transition-all"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.85)",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  title={
+                    isWishlisted(product!.id)
+                      ? "Remove from Wishlist"
+                      : "Add to Wishlist"
+                  }
+                >
+                  <Heart
+                    size={20}
+                    style={
+                      isWishlisted(product!.id)
+                        ? { fill: "#EC008C", color: "#EC008C" }
+                        : { fill: "none", color: "#9ca3af" }
+                    }
+                  />
+                </button>
               </div>
               {/* Thumbnail Strip */}
               {product.images && product.images.length > 1 && (
@@ -616,90 +1062,50 @@ export default function ProductDetailPage({
                         <button
                           key={variant.color}
                           type="button"
-                          onClick={() => {
-                            setSelectedColor(variant.color);
-                            if (selectedSize) {
-                              const available = product.variants!.some(
-                                (v) =>
-                                  v.color === variant.color &&
-                                  v.size === selectedSize,
-                              );
-                              if (!available) setSelectedSize(null);
-                            }
-                          }}
+                          onClick={() => setSelectedColor(variant.color)}
                           data-ocid="product.color.toggle"
                           style={{
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            gap: 4,
-                            padding: "8px 12px",
-                            borderRadius: 10,
+                            justifyContent: "center",
+                            gap: 3,
+                            padding: "6px",
+                            width: 52,
+                            height: 52,
+                            borderRadius: "50%",
                             border: isSelected
                               ? `3px solid ${AFLINO_BLUE}`
-                              : "1px solid #e5e7eb",
+                              : isWhite
+                                ? "1.5px solid #e5e7eb"
+                                : "none",
                             boxShadow: isSelected
                               ? "0 0 0 2px rgba(0,106,255,0.18)"
-                              : "none",
-                            background: "#fff",
+                              : "0 1px 3px rgba(0,0,0,0.06)",
+                            background: variant.swatchImage
+                              ? `url(${variant.swatchImage}) center/cover`
+                              : variant.colorHex,
                             cursor: "pointer",
                             flexShrink: 0,
                             transition: "all 0.15s ease",
-                            minWidth: 64,
+                            position: "relative",
                           }}
+                          title={`${variant.color}${colorPrice ? ` — ₹${colorPrice.toLocaleString("en-IN")}` : ""}`}
                         >
-                          {variant.swatchImage ? (
-                            <img
-                              src={variant.swatchImage}
-                              alt={variant.color}
+                          {isSelected && (
+                            <span
                               style={{
-                                width: 44,
-                                height: 44,
+                                position: "absolute",
+                                bottom: 2,
+                                right: 2,
+                                width: 12,
+                                height: 12,
                                 borderRadius: "50%",
-                                objectFit: "cover",
-                                border: isSelected
-                                  ? `3px solid ${AFLINO_BLUE}`
-                                  : "1.5px solid #d1d5db",
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: "50%",
-                                backgroundColor: variant.colorHex,
-                                border: isWhite
-                                  ? "1.5px solid #d1d5db"
-                                  : "none",
+                                background: AFLINO_BLUE,
+                                border: "2px solid #fff",
                               }}
                             />
                           )}
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: isSelected ? 700 : 500,
-                              color: isSelected ? AFLINO_BLUE : "#374151",
-                              whiteSpace: "nowrap",
-                              maxWidth: 64,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              textAlign: "center",
-                            }}
-                          >
-                            {variant.color}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: isSelected ? AFLINO_BLUE : "#374151",
-                              whiteSpace: "nowrap",
-                              textAlign: "center",
-                            }}
-                          >
-                            ₹{colorPrice.toLocaleString("en-IN")}
-                          </span>
                         </button>
                       );
                     })}
@@ -810,7 +1216,7 @@ export default function ProductDetailPage({
               </div>
 
               {/* CTA Buttons */}
-              <div className="flex gap-3" ref={mainButtonsRef}>
+              <div className="flex gap-3 items-center" ref={mainButtonsRef}>
                 <button
                   type="button"
                   onClick={handleAddToCart}
@@ -1040,138 +1446,7 @@ export default function ProductDetailPage({
           )}
 
           {/* ── Customer Reviews ── */}
-          {(() => {
-            const sampleReviews = [
-              {
-                id: 1,
-                name: "Rahul Sharma",
-                rating: 5,
-                text: "Excellent product! Quality is outstanding and delivery was super fast. Highly recommended for everyone.",
-                date: "15 Mar 2026",
-                avatar: "RS",
-                images: ["👕", "📦"],
-              },
-              {
-                id: 2,
-                name: "Priya Patel",
-                rating: 5,
-                text: "Loved it! The material is premium and fits perfectly. Will definitely buy again from this seller.",
-                date: "10 Mar 2026",
-                avatar: "PP",
-                images: ["✨", "💯"],
-              },
-              {
-                id: 3,
-                name: "Amit Kumar",
-                rating: 4,
-                text: "Very good product. Exactly as described. Fast shipping and well packaged. Great value for money.",
-                date: "5 Mar 2026",
-                avatar: "AK",
-                images: ["📸"],
-              },
-              {
-                id: 4,
-                name: "Sneha Verma",
-                rating: 5,
-                text: "Amazing quality! I was skeptical at first but this exceeded my expectations. Perfect gift idea too!",
-                date: "28 Feb 2026",
-                avatar: "SV",
-                images: ["🎁", "⭐"],
-              },
-              {
-                id: 5,
-                name: "Vikash Singh",
-                rating: 4,
-                text: "Good product, sturdy build. Minor delay in delivery but overall very satisfied with the purchase.",
-                date: "20 Feb 2026",
-                avatar: "VS",
-                images: ["👍"],
-              },
-            ];
-            const allReviewImages = sampleReviews.flatMap((r) =>
-              r.images.map((img) => ({ img, name: r.name })),
-            );
-            return (
-              <section className="border-t border-gray-100 py-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2
-                    className="text-lg font-bold"
-                    style={{ color: "#006AFF" }}
-                  >
-                    Customer Reviews
-                  </h2>
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: "#006AFF" }}
-                  >
-                    4.6 ★ · 127 reviews
-                  </span>
-                </div>
-                {/* Review photos row */}
-                <div className="mb-5">
-                  <p className="text-xs font-semibold text-gray-500 mb-2">
-                    Customer Photos
-                  </p>
-                  <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                    {allReviewImages.map((item, i) => (
-                      <div
-                        key={`${item.name}-${i}`}
-                        className="w-16 h-16 rounded-lg flex-shrink-0 flex items-center justify-center text-2xl"
-                        style={{
-                          background: `hsl(${(i * 47) % 360}, 70%, 93%)`,
-                          border: "1px solid #e5e7eb",
-                        }}
-                      >
-                        {item.img}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Review list — horizontal scroll carousel */}
-                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                  {sampleReviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-xl border border-gray-100 p-4 bg-white shadow-xs flex-shrink-0"
-                      style={{ width: 280 }}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                          style={{ backgroundColor: "#006AFF" }}
-                        >
-                          {review.avatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-gray-900">
-                            {review.name}
-                          </p>
-                          <p className="text-xs text-gray-400">{review.date}</p>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <span
-                              key={star}
-                              className="text-sm"
-                              style={{
-                                color:
-                                  star <= review.rating ? "#006AFF" : "#e5e7eb",
-                              }}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {review.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })()}
+          <CustomerReviewSection productId={String(product.id)} role={role} />
 
           {/* ── Technical Specifications ── */}
           {product.specifications && (
@@ -1404,6 +1679,13 @@ export default function ProductDetailPage({
           </motion.div>
         )}
       </AnimatePresence>
+      {authView && (
+        <AuthModal
+          view={authView}
+          onClose={() => setAuthView(null)}
+          onSwitchView={(v) => setAuthView(v)}
+        />
+      )}
     </>
   );
 }
