@@ -10,6 +10,7 @@ import CommunicationSettings from "@/components/admin/CommunicationSettings";
 import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
 import GlobalPriceAdjuster from "@/components/admin/GlobalPriceAdjuster";
 import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
+import LanguageIconManager from "@/components/admin/LanguageIconManager";
 import PaymentSettingsTab from "@/components/admin/PaymentSettingsTab";
 import QRSecuritySection from "@/components/admin/QRSecuritySection";
 import { Button } from "@/components/ui/button";
@@ -1605,6 +1606,11 @@ export default function AdminDashboard() {
                 <div className="mt-6 space-y-6">
                   <QRSecuritySection />
                   <CourierSettingsSection />
+
+                  {/* Language Icon Manager */}
+                  <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+                    <LanguageIconManager />
+                  </div>
                 </div>
               </div>
             )}

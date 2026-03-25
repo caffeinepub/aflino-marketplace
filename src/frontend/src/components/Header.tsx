@@ -1,10 +1,11 @@
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { useGeoLocation } from "@/context/GeoLocationContext";
+import { useTranslation } from "@/context/I18nContext";
 import { PRODUCTS } from "@/data/products";
 import {
   Camera,
   ChevronDown,
-  Globe,
   Heart,
   MapPin,
   Menu,
@@ -23,8 +24,8 @@ interface HeaderProps {
 }
 
 const navLinks = [
-  { label: "Home", href: "#home" },
-  { label: "All Products", href: "#products" },
+  { labelKey: "nav.home", href: "#home" },
+  { labelKey: "nav.allProducts", href: "#products" },
 ];
 
 function SearchBox({
@@ -129,7 +130,7 @@ function SearchBox({
                   className="text-sm font-bold flex-shrink-0 ml-3"
                   style={{ color: "#006AFF" }}
                 >
-                  ₹{product.price.toLocaleString("en-IN")}
+                  \u20b9{product.price.toLocaleString("en-IN")}
                 </span>
               </button>
             ))}
@@ -141,6 +142,7 @@ function SearchBox({
 }
 
 function LocationPill() {
+  const { t } = useTranslation();
   const { customerState, setCustomerState, requestLocation, indianStates } =
     useGeoLocation();
   const [open, setOpen] = useState(false);
@@ -167,7 +169,7 @@ function LocationPill() {
       >
         <MapPin className="w-3 h-3 flex-shrink-0" />
         <span className="max-w-[80px] truncate">
-          {customerState || "Select Location"}
+          {customerState || t("nav.selectLocation")}
         </span>
         <ChevronDown className="w-3 h-3 flex-shrink-0" />
       </button>
@@ -194,7 +196,7 @@ function LocationPill() {
                 data-ocid="header.location.use_my_location.button"
               >
                 <Navigation className="w-3 h-3" />
-                Use My Location
+                {t("nav.useMyLocation")}
               </button>
               <button
                 type="button"
@@ -205,7 +207,7 @@ function LocationPill() {
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors text-left text-gray-600"
                 data-ocid="header.location.all_india.button"
               >
-                🇮🇳 All India (GST products)
+                \ud83c\uddee\ud83c\uddf3 {t("nav.allIndia")} (GST products)
               </button>
               <div className="h-px bg-gray-100 my-1" />
               <div className="max-h-48 overflow-y-auto">
@@ -244,7 +246,8 @@ function LocationPill() {
 }
 
 export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
-  const [activeLink, setActiveLink] = useState("Home");
+  const { t } = useTranslation();
+  const [activeLink, setActiveLink] = useState("nav.home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
@@ -278,18 +281,18 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
           <nav className="hidden md:flex items-center gap-1 ml-2">
             {navLinks.map((link) => (
               <a
-                key={link.label}
+                key={link.labelKey}
                 href={link.href}
                 data-ocid="nav.link"
-                onClick={() => setActiveLink(link.label)}
+                onClick={() => setActiveLink(link.labelKey)}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors relative ${
-                  activeLink === link.label
+                  activeLink === link.labelKey
                     ? "text-primary"
                     : "text-gray-700 hover:text-primary hover:bg-blue-50"
                 }`}
               >
-                {link.label}
-                {activeLink === link.label && (
+                {t(link.labelKey)}
+                {activeLink === link.labelKey && (
                   <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full" />
                 )}
               </a>
@@ -303,8 +306,8 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
             <LocationPill />
           </div>
 
-          {/* Right icons */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Wishlist icon - desktop (left of language switcher, Snapdeal style) */}
+          <div className="hidden md:flex items-center">
             <button
               type="button"
               className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
@@ -312,13 +315,11 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
             >
               <Heart className="w-5 h-5" />
             </button>
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
-              aria-label="Language"
-            >
-              <Globe className="w-5 h-5" />
-            </button>
+          </div>
+
+          {/* Language Switcher - desktop (between Wishlist and Auth, Snapdeal style) */}
+          <div className="hidden md:block">
+            <LanguageSwitcher />
           </div>
 
           {/* Auth Buttons */}
@@ -330,7 +331,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               style={{ backgroundColor: "#006AFF" }}
               data-ocid="header.login.button"
             >
-              Login
+              {t("nav.login")}
             </Button>
             <Button
               type="button"
@@ -339,7 +340,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               style={{ backgroundColor: "#FF1B8D" }}
               data-ocid="header.register.button"
             >
-              Register
+              {t("nav.register")}
             </Button>
           </div>
 
@@ -373,7 +374,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
           <SearchBox
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search for products, brands and more..."
+            placeholder={t("nav.search")}
             ocid="header.search_input"
           />
         </div>
@@ -393,7 +394,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               <SearchBox
                 value={mobileSearch}
                 onChange={setMobileSearch}
-                placeholder="Search products…"
+                placeholder={t("nav.searchMobile")}
                 ocid="mobile.search_input"
               />
             </div>
@@ -408,7 +409,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                 data-ocid="mobile.location.button"
               >
                 <MapPin className="w-4 h-4" />
-                {customerState || "Select Location"}
+                {customerState || t("nav.selectLocation")}
                 <ChevronDown className="w-3 h-3 ml-auto" />
               </button>
               <AnimatePresence>
@@ -430,7 +431,8 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                         className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold rounded hover:bg-blue-50 text-left"
                         style={{ color: "#006AFF" }}
                       >
-                        <Navigation className="w-3 h-3" /> Use My Location
+                        <Navigation className="w-3 h-3" />{" "}
+                        {t("nav.useMyLocation")}
                       </button>
                       <button
                         type="button"
@@ -440,7 +442,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                         }}
                         className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium rounded hover:bg-gray-100 text-left text-gray-600"
                       >
-                        🇮🇳 All India
+                        \ud83c\uddee\ud83c\uddf3 {t("nav.allIndia")}
                       </button>
                       <div className="h-px bg-gray-200 my-0.5" />
                       {indianStates.map((state) => (
@@ -474,22 +476,27 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               </AnimatePresence>
             </div>
 
+            {/* Language Switcher - mobile */}
+            <div className="rounded-lg border border-gray-100 overflow-hidden">
+              <LanguageSwitcher compact />
+            </div>
+
             {navLinks.map((link) => (
               <a
-                key={link.label}
+                key={link.labelKey}
                 href={link.href}
                 data-ocid="nav.link"
                 onClick={() => {
-                  setActiveLink(link.label);
+                  setActiveLink(link.labelKey);
                   setMobileOpen(false);
                 }}
                 className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                  activeLink === link.label
+                  activeLink === link.labelKey
                     ? "text-primary bg-blue-50"
                     : "text-gray-700"
                 }`}
               >
-                {link.label}
+                {t(link.labelKey)}
               </a>
             ))}
 
@@ -501,7 +508,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
               data-ocid="mobile.filters.button"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              Filters
+              {t("nav.filters")}
             </button>
 
             <div className="flex gap-2 pt-1">
@@ -515,7 +522,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                 style={{ backgroundColor: "#006AFF" }}
                 data-ocid="mobile.login.button"
               >
-                Login
+                {t("nav.login")}
               </Button>
               <Button
                 type="button"
@@ -527,7 +534,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                 style={{ backgroundColor: "#FF1B8D" }}
                 data-ocid="mobile.register.button"
               >
-                Register
+                {t("nav.register")}
               </Button>
             </div>
           </motion.div>

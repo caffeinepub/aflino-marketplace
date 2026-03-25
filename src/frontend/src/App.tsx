@@ -14,6 +14,8 @@ import {
   useGeoLocation,
 } from "@/context/GeoLocationContext";
 import { HomepageManagerProvider } from "@/context/HomepageManagerContext";
+import { I18nProvider } from "@/context/I18nContext";
+import { LanguageIconProvider } from "@/context/LanguageIconContext";
 import type { Order } from "@/context/OrderTrackingContext";
 import { OrderTrackingProvider } from "@/context/OrderTrackingContext";
 import { ProductProvider } from "@/context/ProductContext";
@@ -199,39 +201,43 @@ function AppContent() {
 
 export default function App() {
   return (
-    <HomepageManagerProvider>
-      <GeoLocationProvider>
-        <RoleProvider>
-          <SellerProvider>
-            <RemotePincodeProvider>
-              <AddressProvider>
-                <WishlistProvider>
-                  <RewardSettingsProvider>
-                    <CustomerCoinProvider>
-                      <BlacklistProvider>
-                        <ReviewProvider>
-                          <WalletProvider>
-                            <OrderTrackingProvider>
-                              <CartProvider>
-                                <ProductProvider>
-                                  <FlashSaleProvider>
-                                    <Toaster />
-                                    <AppContent />
-                                  </FlashSaleProvider>
-                                </ProductProvider>
-                              </CartProvider>
-                            </OrderTrackingProvider>
-                          </WalletProvider>
-                        </ReviewProvider>
-                      </BlacklistProvider>
-                    </CustomerCoinProvider>
-                  </RewardSettingsProvider>
-                </WishlistProvider>
-              </AddressProvider>
-            </RemotePincodeProvider>
-          </SellerProvider>
-        </RoleProvider>
-      </GeoLocationProvider>
-    </HomepageManagerProvider>
+    <I18nProvider>
+      <LanguageIconProvider>
+        <HomepageManagerProvider>
+          <GeoLocationProvider>
+            <RoleProvider>
+              <SellerProvider>
+                <RemotePincodeProvider>
+                  <AddressProvider>
+                    <WishlistProvider>
+                      <RewardSettingsProvider>
+                        <CustomerCoinProvider>
+                          <BlacklistProvider>
+                            <ReviewProvider>
+                              <WalletProvider>
+                                <OrderTrackingProvider>
+                                  <CartProvider>
+                                    <ProductProvider>
+                                      <FlashSaleProvider>
+                                        <Toaster />
+                                        <AppContent />
+                                      </FlashSaleProvider>
+                                    </ProductProvider>
+                                  </CartProvider>
+                                </OrderTrackingProvider>
+                              </WalletProvider>
+                            </ReviewProvider>
+                          </BlacklistProvider>
+                        </CustomerCoinProvider>
+                      </RewardSettingsProvider>
+                    </WishlistProvider>
+                  </AddressProvider>
+                </RemotePincodeProvider>
+              </SellerProvider>
+            </RoleProvider>
+          </GeoLocationProvider>
+        </HomepageManagerProvider>
+      </LanguageIconProvider>
+    </I18nProvider>
   );
 }

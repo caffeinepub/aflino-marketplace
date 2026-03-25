@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "होम",
+    "allProducts": "सभी प्रोडक्ट",
+    "trackOrder": "ऑर्डर ट्रैक करें",
+    "login": "लॉगिन",
+    "register": "रजिस्टर",
+    "selectLocation": "लोकेशन चुनें",
+    "useMyLocation": "मेरी लोकेशन उपयोग करें",
+    "allIndia": "पूरे भारत में",
+    "filters": "फिल्टर",
+    "search": "प्रोडक्ट, ब्रांड और अधिक खोजें...",
+    "searchMobile": "प्रोडक्ट खोजें...",
+    "language": "भाषा"
+  },
+  "product": {
+    "addToCart": "कार्ट में जोड़ें",
+    "buyNow": "अभी खरीदें",
+    "viewItem": "आइटम देखें",
+    "outOfStock": "स्टॉक में नहीं",
+    "flashSale": "फ्लैश सेल",
+    "hotDeal": "हॉट डील",
+    "lowStock": "कम स्टॉक"
+  },
+  "checkout": {
+    "title": "चेकआउट",
+    "shippingAddress": "शिपिंग पता",
+    "paymentMethod": "भुगतान विधि",
+    "placeOrder": "ऑर्डर दें",
+    "grandTotal": "कुल राशि",
+    "subtotal": "उपकुल",
+    "aflinoRewards": "AFLINO रिवॉर्ड",
+    "applyCoins": "छूट के लिए कॉइन लगाएं (1 Coin = ₹1)",
+    "coinBalance": "आपके पास {{count}} Coins हैं",
+    "minCoins": "न्यूनतम 5 कॉइन चाहिए",
+    "payViaRazorpay": "Razorpay से भुगतान करें",
+    "name": "पूरा नाम",
+    "phone": "फोन नंबर",
+    "address": "पता",
+    "city": "शहर",
+    "state": "राज्य",
+    "pincode": "पिनकोड"
+  },
+  "tracking": {
+    "title": "ऑर्डर ट्रैक करें",
+    "orderPlaced": "ऑर्डर दिया गया",
+    "packed": "पैक किया गया",
+    "shipped": "भेजा गया",
+    "outForDelivery": "डिलीवरी के लिए निकला",
+    "delivered": "डिलीवर हुआ",
+    "needHelp": "मदद चाहिए?",
+    "trackExternal": "बाहरी साइट पर ट्रैक करें",
+    "gatepassReady": "आपका डिजिटल गेटपास पिकअप एजेंट के लिए तैयार है।",
+    "courierInfo": "कूरियर जानकारी",
+    "awbNumber": "AWB नंबर",
+    "itemSummary": "आइटम सारांश"
+  },
+  "dashboard": {
+    "myOrders": "मेरे ऑर्डर",
+    "myWishlist": "मेरी विशलिस्ट",
+    "myWallet": "मेरा वॉलेट",
+    "savedAddresses": "सेव पते",
+    "myReviews": "मेरी समीक्षाएं",
+    "profile": "प्रोफाइल",
+    "logout": "लॉगआउट",
+    "trackOrder": "ट्रैक करें",
+    "buyAgain": "फिर खरीदें",
+    "writeReview": "समीक्षा लिखें",
+    "moveToCart": "कार्ट में डालें",
+    "remove": "हटाएं"
+  },
+  "wallet": {
+    "balance": "AFLINO Coins बैलेंस",
+    "coins": "Coins",
+    "redeemable": "चेकआउट पर रिडीम करें",
+    "history": "लेनदेन इतिहास",
+    "earnCoins": "समीक्षा लिखने पर 3 coins, फोटो जोड़ने पर 5 coins मिलेंगे!"
+  },
+  "footer": {
+    "about": "AFLINO के बारे में",
+    "contact": "संपर्क करें",
+    "privacy": "गोपनीयता नीति",
+    "terms": "सेवा की शर्तें",
+    "seller": "AFLINO पर बेचें",
+    "copyright": "© 2025 AFLINO. सर्वाधिकार सुरक्षित।"
+  },
+  "common": {
+    "back": "वापस",
+    "save": "सेव करें",
+    "cancel": "रद्द करें",
+    "edit": "संपादित करें",
+    "delete": "हटाएं",
+    "loading": "लोड हो रहा है...",
+    "confirm": "पुष्टि करें",
+    "close": "बंद करें"
+  }
+}
