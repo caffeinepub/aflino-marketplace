@@ -2,10 +2,12 @@ import AuthModal, { type AuthView } from "@/components/AuthModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { PINCODE_MAP, useAddresses } from "@/context/AddressContext";
 import { useCart } from "@/context/CartContext";
-import { useCustomerCoins } from "@/context/CustomerCoinContext";
+import { useOrderTracking } from "@/context/OrderTrackingContext";
 import { useProducts } from "@/context/ProductContext";
 import { useReviews } from "@/context/ReviewContext";
+import { useRewardSettings } from "@/context/RewardSettingsContext";
 import { useRole } from "@/context/RoleContext";
 import { useWishlist } from "@/context/WishlistContext";
 import type { Product, ProductVariant } from "@/data/products";
@@ -19,10 +21,12 @@ import {
   ChevronRight,
   Coins,
   Heart,
+  MapPin,
   Package,
   Play,
   Plus,
   Send,
+  Shield,
   ShoppingCart,
   Star,
   X,
@@ -293,11 +297,36 @@ function StarPicker({
 
 function CustomerReviewSection({
   productId,
+  productName,
   role,
-}: { productId: string; role: string | null }) {
-  const { getApprovedReviews, getProductAverageRating, submitReview } =
-    useReviews();
-  const { addCoins } = useCustomerCoins();
+}: { productId: string; productName: string; role: string | null }) {
+  const {
+    getApprovedReviews,
+    getProductAverageRating,
+    submitReview,
+    getSubmissionCount,
+    getCoinsEarned,
+    isUserBlocked,
+  } = useReviews();
+  const { orders } = useOrderTracking()!;
+  const { settings: rewardSettings } = useRewardSettings();
+
+  // --- Anti-fraud checks ---
+  // 1. Has a delivered order for this product?
+  const hasDeliveredOrder = orders.some(
+    (o) =>
+      o.status === "Delivered" &&
+      o.product?.toLowerCase().includes(productName.toLowerCase().slice(0, 10)),
+  );
+
+  // Use a stable userId derived from demo-customer for the logged-in user
+  const currentUserId = "demo-customer";
+
+  const submissionCount = getSubmissionCount(currentUserId, productId);
+  const coinsAlreadyEarned = getCoinsEarned(currentUserId, productId);
+  const coinCap = rewardSettings.textPoints + rewardSettings.photoPoints;
+  const capReached = coinsAlreadyEarned >= coinCap;
+  const maxSubmissionsReached = submissionCount >= 3;
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -335,37 +364,29 @@ function CustomerReviewSection({
       toast.error("Please select a star rating");
       return;
     }
-    if (!reviewText.trim()) {
-      toast.error("Please write a review");
+    if (reviewText.trim().length < 10) {
+      toast.error("Review must be at least 10 characters");
       return;
     }
     setSubmitting(true);
-    // Simulate upload delay
     await new Promise((r) => setTimeout(r, 800));
     const photoUrls = photos.map((p) => p.url);
-    const userId = `customer-${Date.now()}`;
+
     submitReview({
       productId,
-      userId,
+      userId: currentUserId,
       userName: "You",
       rating,
       reviewText: reviewText.trim(),
       photoUrls,
-      isVerifiedPurchase: false,
+      isVerifiedPurchase: hasDeliveredOrder,
     });
-    if (photos.length > 0) {
-      const coinsEarned = photos.length * 5;
-      addCoins(
-        userId,
-        coinsEarned,
-        `Photo review reward (${photos.length} photo${photos.length > 1 ? "s" : ""})`,
-      );
-      toast.success(
-        `Review submitted! You earned ${coinsEarned} AFLINO Coins 🪙`,
-      );
-    } else {
-      toast.success("Review submitted for moderation!");
-    }
+
+    // Coins are credited ONLY after review is published (auto or manual approval)
+    toast.success(
+      "Review submitted! 🪙 Coins will be credited once your review is published.",
+    );
+
     setSubmitting(false);
     setSubmitted(true);
     setShowForm(false);
@@ -498,29 +519,66 @@ function CustomerReviewSection({
 
       {/* Write Review */}
       <div className="mt-5">
-        {!role ? (
+        {isUserBlocked(currentUserId) ? (
+          <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 rounded-xl p-3 border border-red-200">
+            <Shield className="w-4 h-4 flex-shrink-0" />
+            Your account has been restricted from posting reviews.
+          </div>
+        ) : !role ? (
           <p className="text-sm text-gray-400 text-center py-4">
             <span className="font-medium" style={{ color: AFLINO_BLUE }}>
               Login
             </span>{" "}
             to write a review and earn AFLINO Coins 🪙
           </p>
+        ) : !hasDeliveredOrder ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-200">
+            <Package className="w-4 h-4 flex-shrink-0 text-gray-400" />
+            <span>
+              <span className="font-semibold">Verified Purchase Required.</span>{" "}
+              The "Write a Review" option will be enabled after your order is{" "}
+              <span className="font-semibold text-green-700">Delivered</span>.
+            </span>
+          </div>
+        ) : maxSubmissionsReached ? (
+          <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-50 rounded-xl p-3 border border-orange-200">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            You have reached the maximum of 3 review submissions for this
+            product.
+          </div>
         ) : submitted ? (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-xl p-3 border border-green-200">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             Review submitted for moderation! You'll be notified once approved.
+            {submissionCount > 0 && (
+              <span className="ml-auto text-xs text-gray-400 flex-shrink-0">
+                {submissionCount}/3 submissions used
+              </span>
+            )}
           </div>
         ) : !showForm ? (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: AFLINO_BLUE }}
-            data-ocid="product.write_review.button"
-          >
-            <Star className="w-4 h-4" />
-            Write a Review · Earn Coins 🪙
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: AFLINO_BLUE }}
+              data-ocid="product.write_review.button"
+            >
+              <Star className="w-4 h-4" />
+              {submissionCount === 0
+                ? "Write a Review · Earn Coins 🪙"
+                : `Update Review (${submissionCount}/3)`}
+            </button>
+            <p className="text-xs text-amber-700 font-medium">
+              💡 Write a review to earn {rewardSettings.textPoints} coin
+              {rewardSettings.textPoints !== 1 ? "s" : ""}, or add a photo to
+              get {rewardSettings.textPoints + rewardSettings.photoPoints}{" "}
+              coins! Coins are awarded after your review is published.
+              {coinsAlreadyEarned > 0 &&
+                ` · Already earned: ${coinsAlreadyEarned}/${coinCap} coins`}
+            </p>
+          </div>
         ) : (
           <form
             onSubmit={handleSubmit}
@@ -561,9 +619,11 @@ function CustomerReviewSection({
             {/* Photo upload */}
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-2">
-                Add Photos (up to 3) ·{" "}
+                Add Photos (1–3) ·{" "}
                 <span className="text-amber-600 font-bold">
-                  Earn 5 AFLINO Coins per photo!
+                  +{rewardSettings.photoPoints} bonus coin
+                  {rewardSettings.photoPoints !== 1 ? "s" : ""} for adding a
+                  photo!
                 </span>
               </p>
               <div className="flex gap-2 flex-wrap">
@@ -608,12 +668,46 @@ function CustomerReviewSection({
               />
             </div>
             {/* Coin reminder */}
-            {photos.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
-                <Coins className="w-3.5 h-3.5 flex-shrink-0" />
-                You'll earn {photos.length * 5} AFLINO Coins for this review!
-              </div>
-            )}
+            {(() => {
+              const remaining = coinCap - coinsAlreadyEarned;
+              const hasP = photos.length >= 1;
+              let toEarn = 0;
+              if (remaining > 0) {
+                const textAlready =
+                  coinsAlreadyEarned >= rewardSettings.textPoints;
+                if (!textAlready)
+                  toEarn += Math.min(rewardSettings.textPoints, remaining);
+                if (hasP) {
+                  const photoAlready =
+                    coinsAlreadyEarned >=
+                    rewardSettings.textPoints + rewardSettings.photoPoints;
+                  if (!photoAlready) {
+                    toEarn += Math.min(
+                      rewardSettings.photoPoints,
+                      remaining -
+                        Math.min(rewardSettings.textPoints, remaining),
+                    );
+                  }
+                }
+              }
+              if (capReached)
+                return (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <Coins className="w-3.5 h-3.5 flex-shrink-0" />
+                    You have already earned the maximum {coinCap} coins for this
+                    product.
+                  </div>
+                );
+              if (toEarn > 0)
+                return (
+                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                    <Coins className="w-3.5 h-3.5 flex-shrink-0" />
+                    You'll earn {toEarn} AFLINO Coin{toEarn !== 1 ? "s" : ""}{" "}
+                    for this review!
+                  </div>
+                );
+              return null;
+            })()}
             <Button
               type="submit"
               disabled={submitting}
@@ -658,6 +752,92 @@ function CustomerReviewSection({
         </dialog>
       )}
     </section>
+  );
+}
+
+function DeliverToWidget() {
+  const { addresses } = useAddresses();
+  const defaultAddr = addresses.find((a) => a.isDefault);
+  const [showChange, setShowChange] = useState(false);
+  const [customPin, setCustomPin] = useState("");
+
+  const displayPin = customPin || defaultAddr?.pincode || "Enter pincode";
+  const lookupCity =
+    customPin.length === 6 ? PINCODE_MAP[customPin]?.city : defaultAddr?.city;
+  const lookupState =
+    customPin.length === 6 ? PINCODE_MAP[customPin]?.state : defaultAddr?.state;
+
+  return (
+    <div className="border border-gray-100 rounded-xl p-3 my-3 bg-gray-50">
+      <div className="flex items-center gap-2">
+        <MapPin
+          className="w-4 h-4 flex-shrink-0"
+          style={{ color: "#006AFF" }}
+        />
+        <span className="text-sm text-gray-700">
+          Deliver to{" "}
+          <span className="font-semibold text-gray-900">{displayPin}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setShowChange(!showChange)}
+          className="ml-1 text-xs font-semibold"
+          style={{ color: "#006AFF" }}
+          data-ocid="product.deliver_to.button"
+        >
+          Change
+        </button>
+      </div>
+      {(lookupCity || lookupState) && (
+        <p className="text-xs text-gray-500 mt-1 ml-6">
+          Delivering to: {lookupCity}
+          {lookupState ? `, ${lookupState}` : ""}
+        </p>
+      )}
+      {showChange && (
+        <div className="mt-2 ml-6 space-y-2">
+          {addresses.length > 0 && (
+            <div className="space-y-1">
+              {addresses.map((addr) => (
+                <button
+                  key={addr.id}
+                  type="button"
+                  onClick={() => {
+                    setCustomPin(addr.pincode);
+                    setShowChange(false);
+                  }}
+                  className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 w-full text-left"
+                >
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  {addr.label}: {addr.city}, {addr.pincode}
+                  {addr.isDefault ? " (Default)" : ""}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              maxLength={6}
+              value={customPin}
+              onChange={(e) => setCustomPin(e.target.value)}
+              placeholder="Enter pincode"
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-28 focus:outline-none focus:border-blue-400"
+              data-ocid="product.deliver_to.input"
+            />
+            <button
+              type="button"
+              onClick={() => setShowChange(false)}
+              className="text-xs px-2 py-1 rounded-lg text-white font-semibold"
+              style={{ backgroundColor: "#006AFF" }}
+              data-ocid="product.deliver_to.primary_button"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1273,6 +1453,9 @@ export default function ProductDetailPage({
             </div>
           </div>
 
+          {/* u2014u2014 Deliver To Widget u2014u2014 */}
+          <DeliverToWidget />
+
           {/* ── Product Video Player ── */}
           {product.videoUrl &&
             (() => {
@@ -1446,7 +1629,11 @@ export default function ProductDetailPage({
           )}
 
           {/* ── Customer Reviews ── */}
-          <CustomerReviewSection productId={String(product.id)} role={role} />
+          <CustomerReviewSection
+            productId={String(product.id)}
+            productName={product.title}
+            role={role}
+          />
 
           {/* ── Technical Specifications ── */}
           {product.specifications && (

@@ -16,12 +16,14 @@ interface Props {
     ShippingLabelData,
     "logoDataUrl" | "encryptedTrackingData" | "courierName" | "awbNumber"
   >;
+  isIndiaPost?: boolean;
   customerPhone?: string;
   customerFullAddress?: string;
 }
 
 export default function ShippingLabelButton({
   order,
+  isIndiaPost,
   customerPhone,
   customerFullAddress,
 }: Props) {
@@ -67,6 +69,7 @@ export default function ShippingLabelButton({
         encryptedTrackingData,
         courierName,
         awbNumber,
+        isIndiaPost,
       });
     } finally {
       setGenerating(false);

@@ -1,9 +1,18 @@
 import type React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { PRODUCTS, type Product } from "../data/products";
+
+interface BulkUpdate {
+  id: number;
+  price?: number;
+  discountedPrice?: number;
+  stock?: number;
+  stockThreshold?: number;
+}
 
 interface ProductContextType {
   products: Product[];
+  lowStockProducts: Product[];
   addProduct: (p: Product) => void;
   deleteProduct: (id: number) => void;
   updateProductPrice: (
@@ -12,17 +21,25 @@ interface ProductContextType {
     oldPrice: number,
     onDrop?: (id: number, title: string, price: number) => void,
   ) => void;
+  updateProductsBulk: (updates: BulkUpdate[]) => void;
 }
 
 const ProductContext = createContext<ProductContextType>({
   products: PRODUCTS,
+  lowStockProducts: [],
   addProduct: () => {},
   deleteProduct: () => {},
   updateProductPrice: () => {},
+  updateProductsBulk: () => {},
 });
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
+
+  const lowStockProducts = useMemo(
+    () => products.filter((p) => p.stock <= (p.stockThreshold ?? 5)),
+    [products],
+  );
 
   const addProduct = (p: Product) => setProducts((prev) => [p, ...prev]);
 
@@ -48,9 +65,36 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateProductsBulk = (updates: BulkUpdate[]) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        const update = updates.find((u) => u.id === p.id);
+        if (!update) return p;
+        return {
+          ...p,
+          ...(update.price !== undefined ? { price: update.price } : {}),
+          ...(update.discountedPrice !== undefined
+            ? { discountedPrice: update.discountedPrice }
+            : {}),
+          ...(update.stock !== undefined ? { stock: update.stock } : {}),
+          ...(update.stockThreshold !== undefined
+            ? { stockThreshold: update.stockThreshold }
+            : {}),
+        };
+      }),
+    );
+  };
+
   return (
     <ProductContext.Provider
-      value={{ products, addProduct, deleteProduct, updateProductPrice }}
+      value={{
+        products,
+        lowStockProducts,
+        addProduct,
+        deleteProduct,
+        updateProductPrice,
+        updateProductsBulk,
+      }}
     >
       {children}
     </ProductContext.Provider>

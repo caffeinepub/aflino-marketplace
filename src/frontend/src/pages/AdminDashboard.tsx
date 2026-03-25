@@ -37,14 +37,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useBlacklist } from "@/context/BlacklistContext";
 import { useProducts } from "@/context/ProductContext";
 import { useReviews } from "@/context/ReviewContext";
+import { useRewardSettings } from "@/context/RewardSettingsContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
 import {
   Building2,
   CheckCircle2,
+  Coins,
   CreditCard,
   Image,
   LayoutDashboard,
@@ -128,9 +131,31 @@ export default function AdminDashboard() {
     getCategoryRate,
   } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>("vendors");
-  const { getPendingReviews, approveReview, rejectReview } = useReviews();
-  const pendingReviewsList = getPendingReviews();
-  const pendingReviewsCount = pendingReviewsList.length;
+  const {
+    getScheduledReviews,
+    getFlaggedReviews,
+    approveReview,
+    rejectReview,
+    editReview,
+    deleteAndBlockUser,
+  } = useReviews();
+  const {
+    blacklistWords,
+    addWord: addBlacklistWord,
+    removeWord: removeBlacklistWord,
+  } = useBlacklist();
+  const { settings: rewardSettings, updateSettings: updateRewardSettings } =
+    useRewardSettings();
+  const scheduledReviewsList = getScheduledReviews();
+  const flaggedReviewsList = getFlaggedReviews();
+  const pendingReviewsCount =
+    scheduledReviewsList.length + flaggedReviewsList.length;
+  const [reviewModeTab, setReviewModeTab] = useState<"scheduled" | "flagged">(
+    "scheduled",
+  );
+  const [newBlacklistWord, setNewBlacklistWord] = useState("");
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
 
   // Admin product upload state
   const [adminProductName, setAdminProductName] = useState("");
@@ -1213,9 +1238,17 @@ export default function AdminDashboard() {
                             data-ocid={`product.item.${i + 1}`}
                           >
                             <TableCell className="font-medium text-gray-800 max-w-xs">
-                              <p className="line-clamp-2 leading-snug">
-                                {product.title}
-                              </p>
+                              <div className="flex items-start gap-2 flex-wrap">
+                                <p className="line-clamp-2 leading-snug">
+                                  {product.title}
+                                </p>
+                                {product.stock <=
+                                  (product.stockThreshold ?? 5) && (
+                                  <span className="bg-red-600 text-white font-bold px-2 py-0.5 rounded text-xs flex-shrink-0 animate-pulse">
+                                    LOW STOCK
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-400 mt-0.5">
                                 by {product.seller}
                               </p>
@@ -1587,158 +1620,565 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                    Review Moderation
-                  </h2>
-                  <p className="text-gray-500 text-sm">
-                    Approve or reject customer reviews before they go live
-                  </p>
-                </div>
-                {pendingReviewsCount > 0 && (
-                  <span
-                    className="px-3 py-1.5 rounded-full text-sm font-bold text-white"
-                    style={{ backgroundColor: "#f97316" }}
-                  >
-                    {pendingReviewsCount} Pending
+              {/* Reward Settings */}
+              <div className="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Coins className="w-5 h-5 text-amber-600" />
+                  <h3 className="text-base font-bold text-gray-900">
+                    Reward Settings
+                  </h3>
+                  <span className="ml-auto text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
+                    Live Controls
                   </span>
-                )}
+                </div>
+                <p className="text-xs text-gray-500 mb-4">
+                  Set how many AFLINO Coins customers earn per review. Coins
+                  credited only after publish.
+                </p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-600 mb-1 block">
+                      Text Review Points
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={rewardSettings.textPoints}
+                      onChange={(e) =>
+                        updateRewardSettings({
+                          ...rewardSettings,
+                          textPoints: Math.max(
+                            0,
+                            Number.parseInt(e.target.value) || 0,
+                          ),
+                        })
+                      }
+                      className="text-sm"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Coins for writing text (min 10 chars)
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-600 mb-1 block">
+                      Photo Bonus Points
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={rewardSettings.photoPoints}
+                      onChange={(e) =>
+                        updateRewardSettings({
+                          ...rewardSettings,
+                          photoPoints: Math.max(
+                            0,
+                            Number.parseInt(e.target.value) || 0,
+                          ),
+                        })
+                      }
+                      className="text-sm"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Bonus coins for adding ≥1 photo
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200">
+                  <Coins className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold">Cap per product:</span>{" "}
+                    {rewardSettings.textPoints + rewardSettings.photoPoints}{" "}
+                    coins. Max 3 review submissions.{" "}
+                    <span className="font-semibold text-blue-700">
+                      Coins credited only after publish.
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {pendingReviewsList.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center py-24 text-center"
-                  data-ocid="admin.reviews.empty_state"
-                >
-                  <MessageSquare className="w-14 h-14 text-gray-200 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-1">
-                    No Pending Reviews
+              {/* Blacklist Manager */}
+              <div
+                className="mb-6 p-5 bg-red-50 border border-red-200 rounded-2xl"
+                data-ocid="admin.blacklist.panel"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-red-600" />
+                  <h3 className="text-base font-bold text-gray-900">
+                    Blacklist Manager
                   </h3>
-                  <p className="text-sm text-gray-400">
-                    All reviews have been moderated. Check back later!
-                  </p>
+                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    {blacklistWords.length} words
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-4" data-ocid="admin.reviews.list">
-                  {pendingReviewsList.map((review, i) => (
-                    <div
-                      key={review.reviewId}
-                      className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs"
-                      data-ocid={`admin.reviews.item.${i + 1}`}
+                <p className="text-xs text-gray-500 mb-4">
+                  Words in this list instantly flag reviews (English, Hindi,
+                  Bengali). Flagged reviews are never auto-published — admin
+                  must manually approve them.
+                </p>
+                <div className="flex gap-2 mb-4">
+                  <Input
+                    value={newBlacklistWord}
+                    onChange={(e) => setNewBlacklistWord(e.target.value)}
+                    placeholder="Type a word to block..."
+                    className="text-sm flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (newBlacklistWord.trim()) {
+                          addBlacklistWord(newBlacklistWord.trim());
+                          setNewBlacklistWord("");
+                          toast.success("Word added to blacklist.");
+                        }
+                      }
+                    }}
+                    data-ocid="admin.blacklist.input"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="text-white font-semibold flex-shrink-0"
+                    style={{ backgroundColor: "#006AFF" }}
+                    onClick={() => {
+                      if (newBlacklistWord.trim()) {
+                        addBlacklistWord(newBlacklistWord.trim());
+                        setNewBlacklistWord("");
+                        toast.success("Word added to blacklist.");
+                      }
+                    }}
+                    data-ocid="admin.blacklist.add_button"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Word
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {blacklistWords.map((word) => (
+                    <span
+                      key={word}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border"
+                      style={{
+                        backgroundColor: "#fff0f0",
+                        color: "#b91c1c",
+                        borderColor: "#fecaca",
+                      }}
                     >
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #006AFF, #EC008C)",
-                            }}
-                          >
-                            {review.userName.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-gray-900 text-sm">
-                                {review.userName}
-                              </p>
-                              {review.isVerifiedPurchase && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
-                                  ✓ Verified Purchase
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Product ID: {review.productId}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className="w-4 h-4"
-                              fill={s <= review.rating ? "#006AFF" : "none"}
-                              stroke={
-                                s <= review.rating ? "#006AFF" : "#d1d5db"
+                      {word}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeBlacklistWord(word);
+                          toast.success(`"${word}" removed from blacklist.`);
+                        }}
+                        className="hover:opacity-70 transition-opacity ml-0.5"
+                        aria-label="Remove word"
+                      >
+                        <XCircle
+                          className="w-3.5 h-3.5"
+                          style={{ color: "#EC008C" }}
+                        />
+                      </button>
+                    </span>
+                  ))}
+                  {blacklistWords.length === 0 && (
+                    <p className="text-xs text-gray-400 italic">
+                      No words in blacklist yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Review Moderation */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                      Review Moderation
+                    </h2>
+                    <p className="text-gray-500 text-sm">
+                      Scheduled reviews auto-publish after 1 hour unless you
+                      intervene.
+                    </p>
+                  </div>
+                  {pendingReviewsCount > 0 && (
+                    <span
+                      className="px-3 py-1.5 rounded-full text-sm font-bold text-white"
+                      style={{ backgroundColor: "#f97316" }}
+                    >
+                      {pendingReviewsCount} Pending
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2 mb-5">
+                  <button
+                    type="button"
+                    onClick={() => setReviewModeTab("scheduled")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                    style={
+                      reviewModeTab === "scheduled"
+                        ? { backgroundColor: "#006AFF", color: "#fff" }
+                        : { backgroundColor: "#f3f4f6", color: "#6b7280" }
+                    }
+                    data-ocid="admin.reviews.scheduled.tab"
+                  >
+                    ⏳ Scheduled
+                    {scheduledReviewsList.length > 0 && (
+                      <span
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={
+                          reviewModeTab === "scheduled"
+                            ? {
+                                backgroundColor: "rgba(255,255,255,0.3)",
+                                color: "#fff",
                               }
-                            />
-                          ))}
-                        </div>
-                      </div>
+                            : { backgroundColor: "#006AFF", color: "#fff" }
+                        }
+                      >
+                        {scheduledReviewsList.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewModeTab("flagged")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                    style={
+                      reviewModeTab === "flagged"
+                        ? { backgroundColor: "#ef4444", color: "#fff" }
+                        : { backgroundColor: "#f3f4f6", color: "#6b7280" }
+                    }
+                    data-ocid="admin.reviews.flagged.tab"
+                  >
+                    🚫 Flagged
+                    {flaggedReviewsList.length > 0 && (
+                      <span
+                        className="text-[11px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={
+                          reviewModeTab === "flagged"
+                            ? {
+                                backgroundColor: "rgba(255,255,255,0.3)",
+                                color: "#fff",
+                              }
+                            : { backgroundColor: "#ef4444", color: "#fff" }
+                        }
+                      >
+                        {flaggedReviewsList.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
 
-                      <p className="text-sm text-gray-700 leading-relaxed mb-4 pl-13">
-                        {review.reviewText}
+                {reviewModeTab === "scheduled" &&
+                  (scheduledReviewsList.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center py-16 text-center"
+                      data-ocid="admin.reviews.empty_state"
+                    >
+                      <MessageSquare className="w-12 h-12 text-gray-200 mb-3" />
+                      <h3 className="text-base font-semibold text-gray-600 mb-1">
+                        No Scheduled Reviews
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        Reviews pending auto-publish will appear here.
                       </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4" data-ocid="admin.reviews.list">
+                      {scheduledReviewsList.map((review, i) => {
+                        const minsLeft = review.scheduledAt
+                          ? Math.max(
+                              0,
+                              Math.round(
+                                (60 * 60 * 1000 -
+                                  (Date.now() - review.scheduledAt)) /
+                                  60000,
+                              ),
+                            )
+                          : 60;
+                        return (
+                          <div
+                            key={review.reviewId}
+                            className="bg-white rounded-2xl border border-blue-100 p-5 shadow-xs"
+                            data-ocid={`admin.reviews.item.${i + 1}`}
+                          >
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                              <div className="flex items-start gap-3">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, #006AFF, #EC008C)",
+                                  }}
+                                >
+                                  {review.userName.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-semibold text-gray-900 text-sm">
+                                      {review.userName}
+                                    </p>
+                                    {review.isVerifiedPurchase && (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
+                                        ✓ Verified Purchase
+                                      </span>
+                                    )}
+                                    <span
+                                      className="text-[10px] px-2 py-0.5 rounded-full font-semibold animate-pulse"
+                                      style={{
+                                        backgroundColor: "#dbeafe",
+                                        color: "#1d4ed8",
+                                      }}
+                                    >
+                                      ⏳ ~{minsLeft} min to auto-publish
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    Product ID: {review.productId}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1 flex-shrink-0">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className="w-4 h-4"
+                                    fill={
+                                      s <= review.rating ? "#006AFF" : "none"
+                                    }
+                                    stroke={
+                                      s <= review.rating ? "#006AFF" : "#d1d5db"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
 
-                      {/* Review photos */}
-                      {review.photoUrls.length > 0 && (
-                        <div className="flex gap-2 mb-4">
-                          {review.photoUrls.map((url) => (
-                            <a
-                              key={url}
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 block flex-shrink-0 hover:opacity-90 transition-opacity"
-                            >
-                              <img
-                                src={url}
-                                alt="Review"
-                                className="w-full h-full object-cover"
-                              />
-                            </a>
-                          ))}
-                        </div>
-                      )}
+                            {editingReviewId === review.reviewId ? (
+                              <div className="mb-4">
+                                <Textarea
+                                  value={editingText}
+                                  onChange={(e) =>
+                                    setEditingText(e.target.value)
+                                  }
+                                  className="text-sm mb-2"
+                                  rows={3}
+                                  data-ocid="admin.reviews.edit.textarea"
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="text-white"
+                                    style={{ backgroundColor: "#006AFF" }}
+                                    onClick={() => {
+                                      editReview(review.reviewId, editingText);
+                                      setEditingReviewId(null);
+                                      toast.success("Review text updated.");
+                                    }}
+                                    data-ocid="admin.reviews.edit.save_button"
+                                  >
+                                    Save Edit
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingReviewId(null)}
+                                    data-ocid="admin.reviews.edit.cancel_button"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                                {review.reviewText}
+                              </p>
+                            )}
 
-                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="text-white font-semibold"
-                          style={{ backgroundColor: "#006AFF" }}
-                          onClick={() => {
-                            approveReview(review.reviewId);
-                            const coins = review.photoUrls.length * 5;
-                            if (coins > 0) {
-                              toast.success(
-                                `Review approved! ${coins} AFLINO Coins awarded to reviewer.`,
-                              );
-                            } else {
-                              toast.success("Review approved and published.");
-                            }
-                          }}
-                          data-ocid={`admin.reviews.approve.button.${i + 1}`}
-                        >
-                          <CheckCircle2 className="w-4 h-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => {
-                            rejectReview(review.reviewId);
-                            toast.success("Review rejected.");
-                          }}
-                          data-ocid={`admin.reviews.delete_button.${i + 1}`}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
-                        {review.photoUrls.length > 0 && (
-                          <span className="text-xs text-amber-700 ml-auto font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                            🪙 {review.photoUrls.length * 5} coins on approve
-                          </span>
-                        )}
-                      </div>
+                            {review.photoUrls.length > 0 && (
+                              <div className="flex gap-2 mb-4">
+                                {review.photoUrls.map((url) => (
+                                  <a
+                                    key={url}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 block flex-shrink-0 hover:opacity-90 transition-opacity"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt="Review"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 pt-3 border-t border-gray-100 flex-wrap">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="text-white font-semibold"
+                                style={{ backgroundColor: "#006AFF" }}
+                                onClick={() => {
+                                  approveReview(review.reviewId);
+                                  toast.success(
+                                    "Review approved & published! Coins credited to reviewer.",
+                                  );
+                                }}
+                                data-ocid={`admin.reviews.approve.button.${i + 1}`}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Approve Now
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-gray-600 border-gray-200"
+                                onClick={() => {
+                                  setEditingReviewId(review.reviewId);
+                                  setEditingText(review.reviewText);
+                                }}
+                                data-ocid={`admin.reviews.edit.button.${i + 1}`}
+                              >
+                                ✏️ Edit
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => {
+                                  rejectReview(review.reviewId);
+                                  toast.success("Review flagged.");
+                                }}
+                                data-ocid={`admin.reviews.flag.button.${i + 1}`}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Flag It
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
-                </div>
-              )}
+
+                {reviewModeTab === "flagged" &&
+                  (flaggedReviewsList.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center py-16 text-center"
+                      data-ocid="admin.reviews.flagged.empty_state"
+                    >
+                      <Shield className="w-12 h-12 text-gray-200 mb-3" />
+                      <h3 className="text-base font-semibold text-gray-600 mb-1">
+                        No Flagged Reviews
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        All clear! No reviews flagged by Smart-Scan.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="space-y-4"
+                      data-ocid="admin.reviews.flagged.list"
+                    >
+                      {flaggedReviewsList.map((review, i) => (
+                        <div
+                          key={review.reviewId}
+                          className="bg-white rounded-2xl border border-red-100 p-5 shadow-xs"
+                          data-ocid={`admin.reviews.flagged.item.${i + 1}`}
+                        >
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex items-start gap-3">
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                style={{
+                                  background:
+                                    "linear-gradient(135deg, #ef4444, #EC008C)",
+                                }}
+                              >
+                                {review.userName.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 text-sm">
+                                  {review.userName}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  Product ID: {review.productId}
+                                </p>
+                                {review.scanReason && (
+                                  <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-700 border border-red-200">
+                                    ⚠️ {review.scanReason}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className="w-4 h-4"
+                                  fill={s <= review.rating ? "#ef4444" : "none"}
+                                  stroke={
+                                    s <= review.rating ? "#ef4444" : "#d1d5db"
+                                  }
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-gray-700 leading-relaxed mb-4 line-through opacity-60">
+                            {review.reviewText}
+                          </p>
+
+                          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="text-white font-semibold"
+                              style={{ backgroundColor: "#006AFF" }}
+                              onClick={() => {
+                                approveReview(review.reviewId);
+                                toast.success(
+                                  "Review approved & published. Coins credited.",
+                                );
+                              }}
+                              data-ocid={`admin.reviews.approve_anyway.button.${i + 1}`}
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Approve Anyway
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50 ml-auto"
+                              onClick={() => {
+                                deleteAndBlockUser(
+                                  review.reviewId,
+                                  review.userId,
+                                );
+                                toast.success(
+                                  "Review deleted and user blocked from posting reviews.",
+                                );
+                              }}
+                              data-ocid={`admin.reviews.delete_button.${i + 1}`}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete & Block User
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+              </div>
             </motion.div>
           )}
 

@@ -7,7 +7,8 @@ export type OrderStatus =
   | "Shipped"
   | "Out for Delivery"
   | "Delivered"
-  | "Paid & Processing";
+  | "Paid & Processing"
+  | "Refund Initiated";
 
 export interface Order {
   id: string;
@@ -35,6 +36,11 @@ export interface Order {
   category?: string;
   // Customer contact (for encrypted QR)
   buyerPhone?: string;
+  // Logistics / Shipping
+  awbNumber?: string;
+  courierPartner?: string;
+  nonReturnable?: boolean;
+  indiaPostOrder?: boolean;
 }
 
 interface OrderTrackingContextValue {
@@ -73,6 +79,8 @@ const INITIAL_ORDERS: Order[] = [
     unitPrice: 2499,
     discount: 0,
     category: "Electronics",
+    awbNumber: "DL-112233445",
+    courierPartner: "Delhivery",
   },
   {
     id: "ORD-10391",
@@ -98,6 +106,8 @@ const INITIAL_ORDERS: Order[] = [
     unitPrice: 3199,
     discount: 200,
     category: "Fashion",
+    awbNumber: "BD-556677889",
+    courierPartner: "BlueDart",
   },
   {
     id: "ORD-10267",
@@ -124,6 +134,8 @@ const INITIAL_ORDERS: Order[] = [
     unitPrice: 649,
     discount: 0,
     category: "Home & Kitchen",
+    awbNumber: "DL-987654321",
+    courierPartner: "Delhivery",
   },
 ];
 

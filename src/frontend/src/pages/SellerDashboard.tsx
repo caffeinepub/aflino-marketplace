@@ -1,4 +1,5 @@
 import GatepassQR from "@/components/GatepassQR";
+import IndiaPostFallbackModal from "@/components/IndiaPostFallbackModal";
 import InvoiceButton from "@/components/InvoiceButton";
 import {
   type AdvancedFormState,
@@ -7,6 +8,7 @@ import {
   initialAdvancedState,
 } from "@/components/ProductAdvancedSections";
 import ShippingLabelButton from "@/components/ShippingLabelButton";
+import BulkCSVManager from "@/components/seller/BulkCSVManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,8 +38,13 @@ import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
 import {
+  getActivePartnerName,
+  getLogisticsConfig,
+} from "@/hooks/useLogisticsConfig";
+import {
   AlertCircle,
   BarChart3,
+  Bell,
   ClipboardList,
   Clock,
   LogOut,
@@ -54,7 +61,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { logWhatsApp } from "../utils/communicationLogger";
 
-type Tab = "upload" | "wallet" | "orders";
+type Tab = "upload" | "wallet" | "orders" | "products";
 
 interface Props {
   sellerEmail?: string;
@@ -85,6 +92,7 @@ const ORDER_STATUSES: OrderStatus[] = [
   "Shipped",
   "Out for Delivery",
   "Delivered",
+  "Refund Initiated",
 ];
 
 const statusPillStyle: Record<OrderStatus, string> = {
@@ -94,6 +102,7 @@ const statusPillStyle: Record<OrderStatus, string> = {
   "Out for Delivery": "bg-orange-100 text-orange-700",
   Delivered: "bg-emerald-100 text-emerald-700",
   "Paid & Processing": "bg-blue-100 text-blue-700",
+  "Refund Initiated": "bg-red-100 text-red-700",
 };
 
 function newVariantRow(): VariantRow {
@@ -126,13 +135,16 @@ export default function SellerDashboard({
     getCategoryRate,
   } = useWallet();
   const { orders, updateOrderStatus } = useOrderTracking();
-  const { addProduct } = useProducts();
+  const { addProduct, lowStockProducts } = useProducts();
 
   const approved = isApproved(sellerEmail);
   const sellerProfile = getSellerByEmail(sellerEmail);
   const isLocalSeller = sellerProfile?.sellerType === "enrollmentId";
   const [activeTab, setActiveTab] = useState<Tab>("upload");
+  const [showBell, setShowBell] = useState(false);
   const [gatepassOrderId, setGatepassOrderId] = useState<string | null>(null);
+  const [indiaPostOrderId, setIndiaPostOrderId] = useState<string | null>(null);
+  const [showIndiaPostModal, setShowIndiaPostModal] = useState(false);
   const [upgradeGstin, setUpgradeGstin] = useState("");
   const [upgradePan, setUpgradePan] = useState("");
 
@@ -330,7 +342,13 @@ export default function SellerDashboard({
           </button>
           <button
             type="button"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 text-sm hover:bg-gray-50 transition-colors"
+            onClick={() => setActiveTab("products")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "products"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="seller.products.tab"
           >
             <ShoppingBag className="w-4 h-4" />
             My Products
@@ -351,16 +369,81 @@ export default function SellerDashboard({
           <h1 className="text-lg font-semibold text-gray-800">
             Seller Dashboard
           </h1>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={logout}
-            className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 text-sm"
-            data-ocid="seller.logout.button"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Low Stock Bell */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowBell((v) => !v)}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Stock Alerts"
+                data-ocid="seller.bell.button"
+              >
+                <Bell
+                  className={`w-5 h-5 ${lowStockProducts.length > 0 ? "text-red-500" : "text-gray-500"}`}
+                />
+                {lowStockProducts.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                    {lowStockProducts.length}
+                  </span>
+                )}
+              </button>
+              {showBell && (
+                <div
+                  className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50"
+                  data-ocid="seller.bell.dropdown_menu"
+                >
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <span className="font-semibold text-gray-800 text-sm">
+                      Stock Alerts
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBell(false)}
+                      className="ml-auto text-gray-400 hover:text-gray-600 text-xs"
+                      data-ocid="seller.bell.close_button"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {lowStockProducts.length === 0 ? (
+                      <p className="px-4 py-4 text-sm text-gray-500 text-center">
+                        All products are well-stocked ✅
+                      </p>
+                    ) : (
+                      lowStockProducts.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-start gap-2 px-4 py-3 border-b border-gray-50 hover:bg-red-50 transition-colors"
+                        >
+                          <span className="text-base">🔴</span>
+                          <p className="text-xs text-gray-700">
+                            <span className="font-semibold">Alert:</span>{" "}
+                            {p.title} is at{" "}
+                            <span className="font-bold text-red-600">
+                              {p.stock} units!
+                            </span>
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={logout}
+              className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 text-sm"
+              data-ocid="seller.logout.button"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
         </header>
 
         <main className="flex-1 p-8">
@@ -1193,6 +1276,8 @@ export default function SellerDashboard({
               </div>
             )}
 
+            {activeTab === "products" && <BulkCSVManager />}
+
             {activeTab === "orders" && (
               <div className="max-w-4xl">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -1262,6 +1347,12 @@ export default function SellerDashboard({
                               >
                                 {order.status}
                               </span>
+                              {(order.indiaPostOrder ||
+                                order.nonReturnable) && (
+                                <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold ml-1">
+                                  INDIA POST
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Select
@@ -1342,6 +1433,17 @@ export default function SellerDashboard({
                                     >
                                       Gatepass
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIndiaPostOrderId(order.id);
+                                        setShowIndiaPostModal(true);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-amber-400 text-amber-700 bg-amber-50 text-xs font-medium hover:bg-amber-100 transition-colors"
+                                      data-ocid={`seller.orders.indiapost.${i + 1}`}
+                                    >
+                                      India Post
+                                    </button>
                                   </>
                                 )}
                               </div>
@@ -1356,6 +1458,49 @@ export default function SellerDashboard({
             )}
           </motion.div>
         </main>
+        <IndiaPostFallbackModal
+          type="seller"
+          isOpen={showIndiaPostModal}
+          onClose={() => {
+            setShowIndiaPostModal(false);
+            setIndiaPostOrderId(null);
+          }}
+          onAccept={(trackingId) => {
+            if (indiaPostOrderId) {
+              updateOrderStatus(indiaPostOrderId, "Shipped");
+              if (trackingId) {
+                const stored = JSON.parse(
+                  localStorage.getItem("aflino_indiapost_tracking") ?? "{}",
+                );
+                stored[indiaPostOrderId] = trackingId;
+                localStorage.setItem(
+                  "aflino_indiapost_tracking",
+                  JSON.stringify(stored),
+                );
+              }
+              const ipOrders = JSON.parse(
+                localStorage.getItem("aflino_indiapost_orders") ?? "{}",
+              );
+              ipOrders[indiaPostOrderId] = true;
+              localStorage.setItem(
+                "aflino_indiapost_orders",
+                JSON.stringify(ipOrders),
+              );
+              toast.success("Order marked as Shipped via India Post!");
+            }
+            setShowIndiaPostModal(false);
+            setIndiaPostOrderId(null);
+          }}
+          orderId={indiaPostOrderId ?? undefined}
+          partnerName={getActivePartnerName(getLogisticsConfig())}
+          onReject={() => {
+            if (indiaPostOrderId) {
+              updateOrderStatus(indiaPostOrderId, "Refund Initiated");
+              logWhatsApp("india_post_rejected", "", indiaPostOrderId);
+              toast.error("Order cancelled. Refund initiated for customer.");
+            }
+          }}
+        />
         {gatepassOrderId && (
           <GatepassQR
             orderId={gatepassOrderId}

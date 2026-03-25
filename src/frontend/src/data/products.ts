@@ -7,6 +7,8 @@ export interface ProductVariant {
   stock: number;
   sku?: string;
   swatchImage?: string;
+  discountedPrice?: number;
+  stockThreshold?: number;
 }
 
 export interface Product {
@@ -41,6 +43,8 @@ export interface Product {
   sizeChartImage?: string;
   sellerState?: string;
   sellerType?: "gstin" | "enrollmentId";
+  discountedPrice?: number;
+  stockThreshold?: number;
 }
 
 export const PRODUCTS: Product[] = [
@@ -52,7 +56,9 @@ export const PRODUCTS: Product[] = [
     sellerType: "gstin",
     category: "Electronics",
     price: 2499,
-    stock: 50,
+    discountedPrice: 2199,
+    stock: 3,
+    stockThreshold: 5,
     rating: 4.5,
     description:
       "Premium wireless headphones with active noise cancellation and 30-hour battery life. Features Hi-Res Audio certification, aptX HD support, and a comfortable over-ear design with memory foam cushions. The built-in microphone ensures crystal-clear calls, while the foldable design makes it easy to carry on the go.",
@@ -113,7 +119,9 @@ export const PRODUCTS: Product[] = [
     sellerType: "gstin",
     category: "Electronics",
     price: 1299,
-    stock: 30,
+    discountedPrice: 1099,
+    stock: 2,
+    stockThreshold: 5,
     rating: 4.2,
     description:
       "Intelligent LED desk lamp with touch controls, 5 color temperatures, and 10 brightness levels. Features a USB charging port, auto-dimming sensor, and a flexible gooseneck arm. Perfect for studying, reading, or working late nights with eye-care technology that reduces strain.",

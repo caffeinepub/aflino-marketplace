@@ -22,6 +22,7 @@ export interface ShippingLabelData {
   encryptedTrackingData?: string;
   courierName?: string;
   awbNumber?: string;
+  isIndiaPost?: boolean;
 }
 
 function drawQRPlaceholder(
@@ -120,6 +121,20 @@ export async function generateShippingLabel(
   doc.setTextColor(80, 80, 80);
   doc.text("AFLINO LOCAL MARKETPLACE", 3, y);
   y += 3;
+
+  // ── NON-RETURNABLE banner (India Post only) ───────────
+  if (data.isIndiaPost) {
+    doc.setFillColor(0, 0, 0);
+    doc.rect(0, y, W, 12, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("NON-RETURNABLE ORDER - INDIA POST", W / 2, y + 7.5, {
+      align: "center",
+    });
+    doc.setTextColor(0, 0, 0);
+    y += 14;
+  }
 
   // ── Divider ─────────────────────────────────────
   doc.setDrawColor(0, 0, 0);

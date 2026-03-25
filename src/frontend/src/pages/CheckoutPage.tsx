@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import IndiaPostNonReturnableModal from "../components/IndiaPostNonReturnableModal";
+import { useRemotePincode } from "../context/RemotePincodeContext";
 import { logWhatsApp } from "../utils/communicationLogger";
 import { razorpayBackend } from "../utils/razorpayBackend";
 
@@ -64,6 +66,10 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
   );
   const [applyCoins, setApplyCoins] = useState(false);
   const { getCoinBalance, redeemCoins } = useCustomerCoins();
+  const { isPincodeRemote } = useRemotePincode();
+  const [showIndiaPostWarning, setShowIndiaPostWarning] = useState(false);
+  const [userAcceptedNonReturnable, setUserAcceptedNonReturnable] =
+    useState(false);
   const userId = "demo-customer";
   const coinBalance = getCoinBalance(userId);
   const canUseCoins = coinBalance >= MIN_COINS_TO_REDEEM;
@@ -99,6 +105,11 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
 
   async function handlePlaceOrder() {
     if (!validate()) return;
+    // Check if pincode is remote (India Post only) and user hasn't accepted yet
+    if (isPincodeRemote(form.pincode) && !userAcceptedNonReturnable) {
+      setShowIndiaPostWarning(true);
+      return;
+    }
     if (cartItems.length === 0) {
       toast.error("Your cart is empty.");
       return;
@@ -176,6 +187,8 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
                 gstRate: 18,
                 hsnCode: "8517",
                 discount: 0,
+                nonReturnable: isPincodeRemote(form.pincode),
+                indiaPostOrder: isPincodeRemote(form.pincode),
               };
               addOrder(newOrder);
               clearCart();
@@ -619,9 +632,10 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
                 id="chk-pincode"
                 type="text"
                 value={form.pincode}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, pincode: e.target.value }))
-                }
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, pincode: e.target.value }));
+                  setUserAcceptedNonReturnable(false);
+                }}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none"
                 placeholder="400001"
                 maxLength={6}
@@ -686,6 +700,17 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
           )}
         </button>
       </div>
+
+      <IndiaPostNonReturnableModal
+        isOpen={showIndiaPostWarning}
+        pincode={form.pincode}
+        onAccept={() => {
+          setUserAcceptedNonReturnable(true);
+          setShowIndiaPostWarning(false);
+          handlePlaceOrder();
+        }}
+        onCancel={() => setShowIndiaPostWarning(false)}
+      />
     </div>
   );
 }
