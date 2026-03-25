@@ -1,4 +1,14 @@
+import {
+  type AdvancedFormState,
+  ProductAdvancedSections,
+  SwatchImageUpload,
+  initialAdvancedState,
+} from "@/components/ProductAdvancedSections";
+import BrandSettingsTab from "@/components/admin/BrandSettingsTab";
+import CommunicationSettings from "@/components/admin/CommunicationSettings";
+import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
 import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
+import PaymentSettingsTab from "@/components/admin/PaymentSettingsTab";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +20,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useProducts } from "@/context/ProductContext";
 import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
@@ -24,12 +43,17 @@ import { useWallet } from "@/context/WalletContext";
 import {
   Building2,
   CheckCircle2,
+  CreditCard,
+  Image,
   LayoutDashboard,
   LogOut,
+  Mail,
   Package,
+  Plus,
   Settings2,
   Shield,
   Trash2,
+  Upload,
   Users,
   Wallet,
   XCircle,
@@ -38,55 +62,51 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const vendors = [
-  {
-    id: 1,
-    name: "TechZone Store",
-    email: "techzone@aflino.com",
-    status: "Active",
-    products: 42,
-  },
-  {
-    id: 2,
-    name: "Fashion Hub",
-    email: "fashionhub@aflino.com",
-    status: "Active",
-    products: 128,
-  },
-  {
-    id: 3,
-    name: "HomeGoods Co.",
-    email: "homegoods@aflino.com",
-    status: "Active",
-    products: 17,
-  },
-  {
-    id: 4,
-    name: "EcoMarket",
-    email: "ecomarket@aflino.com",
-    status: "Suspended",
-    products: 5,
-  },
-];
-
-const statusColors: Record<string, string> = {
-  Active: "bg-emerald-100 text-emerald-700",
-  Pending: "bg-yellow-100 text-yellow-700",
-  Suspended: "bg-red-100 text-red-700",
-};
-
 type Tab =
   | "vendors"
   | "approvals"
   | "payouts"
   | "settings"
   | "products"
-  | "homepage";
+  | "homepage"
+  | "payment"
+  | "communication"
+  | "brand";
+
+interface AdminVariantRow {
+  id: string;
+  size: string;
+  color: string;
+  colorHex: string;
+  price: string;
+  stock: string;
+  sku: string;
+  swatchImage: string;
+}
+
+function newAdminVariantRow(): AdminVariantRow {
+  return {
+    id: Math.random().toString(36).slice(2),
+    size: "",
+    color: "",
+    colorHex: "#000000",
+    price: "",
+    stock: "",
+    sku: "",
+    swatchImage: "",
+  };
+}
 
 export default function AdminDashboard() {
   const { logout } = useRole();
-  const { products, deleteProduct } = useProducts();
-  const { pendingSellers, approveSeller, rejectSeller } = useSellerContext();
+  const { products, addProduct, deleteProduct } = useProducts();
+  const {
+    pendingSellers,
+    approveSeller,
+    rejectSeller,
+    approvedSellers,
+    updateSellerType,
+  } = useSellerContext();
   const {
     payoutRequests,
     commissionRate,
@@ -95,13 +115,133 @@ export default function AdminDashboard() {
     setMinPayoutAmount,
     approvePayout,
     rejectPayout,
+    walletEntries,
+    payoutHistory,
+    getTotalAdminCommission,
+    categoryRates,
+    setCategoryRates,
+    getCategoryRate,
   } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>("vendors");
 
+  // Admin product upload state
+  const [adminProductName, setAdminProductName] = useState("");
+  const [adminCategory, setAdminCategory] = useState("");
+  const [adminPrice, setAdminPrice] = useState("");
+  const [adminStock, setAdminStock] = useState("");
+  const [adminDescription, setAdminDescription] = useState("");
+  const [adminVariantsEnabled, setAdminVariantsEnabled] = useState(false);
+  const [adminVariantRows, setAdminVariantRows] = useState<AdminVariantRow[]>([
+    newAdminVariantRow(),
+  ]);
+  const [adminAdvancedState, setAdminAdvancedState] =
+    useState<AdvancedFormState>(initialAdvancedState());
+
+  function addAdminVariantRow() {
+    setAdminVariantRows((p) => [...p, newAdminVariantRow()]);
+  }
+  function removeAdminVariantRow(id: string) {
+    setAdminVariantRows((p) => p.filter((r) => r.id !== id));
+  }
+  function updateAdminVariantRow(
+    id: string,
+    field: keyof AdminVariantRow,
+    value: string,
+  ) {
+    setAdminVariantRows((p) =>
+      p.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+    );
+  }
+
+  const handleAdminUpload = () => {
+    if (!adminProductName || !adminCategory) {
+      toast.error("Please fill in Product Title and Category");
+      return;
+    }
+    if (!adminVariantsEnabled && (!adminPrice || !adminStock)) {
+      toast.error("Please fill in Price and Stock");
+      return;
+    }
+    addProduct({
+      id: Date.now(),
+      title: adminProductName,
+      category:
+        (
+          {
+            electronics: "Electronics",
+            fashion: "Fashion",
+            home: "Home & Kitchen",
+            beauty: "Beauty",
+            sports: "Sports",
+            books: "Books",
+          } as Record<string, string>
+        )[adminCategory] || adminCategory,
+      price:
+        Number.parseFloat(adminPrice) ||
+        (adminVariantRows[0]
+          ? Number.parseFloat(adminVariantRows[0].price) || 0
+          : 0),
+      description: adminDescription,
+      stock: Number.parseInt(adminStock) || 50,
+      rating: 4.0,
+      seller: "Admin",
+      images: [],
+      videoUrl: adminAdvancedState.videoUrl || undefined,
+      weight: Number.parseFloat(adminAdvancedState.weight) || undefined,
+      weightUnit: adminAdvancedState.weightUnit,
+      brandName: adminAdvancedState.brandName || undefined,
+      countryOfOrigin: adminAdvancedState.countryOfOrigin || undefined,
+      gstRate: adminAdvancedState.gstRate
+        ? (Number.parseInt(adminAdvancedState.gstRate) as 5 | 12 | 18 | 28)
+        : undefined,
+      hsnCode: adminAdvancedState.hsnCode || undefined,
+      whatInTheBox: adminAdvancedState.whatInTheBox,
+      variants: adminVariantsEnabled
+        ? adminVariantRows.map((r) => ({
+            id: r.id,
+            label: r.size
+              ? `${r.size}${r.color ? ` + ${r.color}` : ""}`
+              : r.color,
+            size: r.size,
+            color: r.color,
+            colorHex: r.colorHex,
+            price: Number.parseFloat(r.price) || 0,
+            stock: Number.parseInt(r.stock) || 0,
+            sku: r.sku || undefined,
+            swatchImage: r.swatchImage || undefined,
+          }))
+        : [],
+    });
+    toast.success(`Product "${adminProductName}" added!`);
+    setAdminProductName("");
+    setAdminCategory("");
+    setAdminPrice("");
+    setAdminStock("");
+    setAdminDescription("");
+    setAdminVariantsEnabled(false);
+    setAdminVariantRows([newAdminVariantRow()]);
+    setAdminAdvancedState(initialAdvancedState());
+  };
+
   // Settings form state
-  const [commissionInput, setCommissionInput] = useState(
+  const [localCategoryRates, setLocalCategoryRates] =
+    useState<Record<string, number>>(categoryRates);
+  const [globalRateInput, setGlobalRateInput] = useState(
     String(commissionRate),
   );
+
+  const COMMISSION_CATEGORIES = [
+    { key: "mobiles", label: "Mobiles" },
+    { key: "electronics", label: "Electronics" },
+    { key: "fashion", label: "Fashion" },
+    { key: "home", label: "Home & Kitchen" },
+    { key: "beauty", label: "Beauty" },
+    { key: "sports", label: "Sports" },
+    { key: "books", label: "Books" },
+    { key: "tools", label: "Tools" },
+    { key: "gadgets", label: "Gadgets" },
+    { key: "appliances", label: "Home Appliances" },
+  ];
   const [minPayoutInput, setMinPayoutInput] = useState(String(minPayoutAmount));
 
   // Approve payout dialog
@@ -110,6 +250,7 @@ export default function AdminDashboard() {
     null,
   );
   const [payoutAmountInput, setPayoutAmountInput] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("UPI");
 
   const pendingPayouts = payoutRequests.filter((r) => r.status === "pending");
 
@@ -136,7 +277,7 @@ export default function AdminDashboard() {
       toast.error("Please enter a valid amount");
       return;
     }
-    approvePayout(selectedRequestId, amount);
+    approvePayout(selectedRequestId, amount, paymentMethod);
     setApproveDialogOpen(false);
     setSelectedRequestId(null);
     toast.success(`Payout of ₹${amount.toFixed(2)} approved successfully!`);
@@ -145,16 +286,6 @@ export default function AdminDashboard() {
   const handleRejectPayout = (requestId: string, sellerName: string) => {
     rejectPayout(requestId);
     toast.error(`Payout request from ${sellerName} rejected.`);
-  };
-
-  const handleSaveCommission = () => {
-    const val = Number.parseFloat(commissionInput);
-    if (Number.isNaN(val) || val < 0 || val > 100) {
-      toast.error("Commission rate must be between 0 and 100");
-      return;
-    }
-    setCommissionRate(val);
-    toast.success(`Commission rate updated to ${val}%`);
   };
 
   const handleSaveMinPayout = () => {
@@ -269,6 +400,45 @@ export default function AdminDashboard() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("payment")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "payment"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.payment_settings.tab"
+          >
+            <CreditCard className="w-4 h-4" />
+            Payment Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("communication")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "communication"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.communication.tab"
+          >
+            <Mail className="w-4 h-4" />
+            Communication
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("brand")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "brand"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.brand_settings.tab"
+          >
+            <Image className="w-4 h-4" />
+            Brand Settings
+          </button>
+          <button
+            type="button"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 text-sm hover:bg-gray-50 transition-colors"
           >
             <Shield className="w-4 h-4" />
@@ -308,67 +478,98 @@ export default function AdminDashboard() {
                   Vendor Management
                 </h2>
                 <p className="text-gray-500 text-sm mb-6">
-                  Review and manage marketplace vendors
+                  Toggle seller type to control Pan-India (Global GST) vs local
+                  state visibility.
                 </p>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
                         <TableHead className="font-semibold text-gray-700">
-                          Vendor Name
+                          Business Name
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700">
                           Email
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700">
-                          Products
+                          State
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700">
-                          Status
+                          Seller Type
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700">
-                          Actions
+                          Change Type
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {vendors.map((v, i) => (
-                        <TableRow key={v.id} data-ocid={`vendor.item.${i + 1}`}>
+                      {approvedSellers.map((s, i) => (
+                        <TableRow key={s.id} data-ocid={`vendor.item.${i + 1}`}>
                           <TableCell className="font-medium text-gray-800">
-                            {v.name}
+                            {s.businessName}
                           </TableCell>
                           <TableCell className="text-gray-500 text-sm">
-                            {v.email}
+                            {s.email}
                           </TableCell>
-                          <TableCell className="text-gray-600">
-                            {v.products}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[v.status]}`}
-                            >
-                              {v.status}
-                            </span>
+                          <TableCell className="text-gray-600 text-sm">
+                            {s.state}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            {s.sellerType === "enrollmentId" ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                📍 Local (Enrolment ID)
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50"
+                                style={{ color: "#006AFF" }}
+                              >
+                                🌐 Global (GST)
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {s.sellerType === "gstin" ? (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 text-xs"
-                                data-ocid={`vendor.edit_button.${i + 1}`}
+                                className="h-7 text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                                onClick={() => {
+                                  const eid = prompt(
+                                    `Change ${s.businessName} to Local seller.\nEnter Enrolment ID (or leave blank):`,
+                                  );
+                                  if (eid !== null) {
+                                    updateSellerType(
+                                      s.id,
+                                      "enrollmentId",
+                                      eid || undefined,
+                                    );
+                                    toast.success(
+                                      `${s.businessName} set to Local. Products show only in ${s.state}.`,
+                                    );
+                                  }
+                                }}
+                                data-ocid={`vendor.change_type.button.${i + 1}`}
                               >
-                                Edit
+                                Set Local
                               </Button>
+                            ) : (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                                data-ocid={`vendor.delete_button.${i + 1}`}
+                                className="h-7 text-xs border-blue-300 hover:bg-blue-50"
+                                style={{ color: "#006AFF" }}
+                                onClick={() => {
+                                  updateSellerType(s.id, "gstin");
+                                  toast.success(
+                                    `${s.businessName} upgraded to Global GST. Products now visible Pan-India.`,
+                                  );
+                                }}
+                                data-ocid={`vendor.change_type.button.${i + 1}`}
                               >
-                                Remove
+                                Set Global
                               </Button>
-                            </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -433,7 +634,7 @@ export default function AdminDashboard() {
                               {seller.businessName}
                             </TableCell>
                             <TableCell className="text-gray-500 text-sm font-mono">
-                              {seller.gst}
+                              {seller.gstin}
                             </TableCell>
                             <TableCell className="text-gray-500 text-sm">
                               {seller.email}
@@ -495,6 +696,70 @@ export default function AdminDashboard() {
                 <p className="text-gray-500 text-sm mb-6">
                   Review and process seller payout requests
                 </p>
+
+                {/* Platform Earnings Summary Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                      Total Sales Volume
+                    </p>
+                    <p
+                      className="text-xl font-bold"
+                      style={{ color: "#006AFF" }}
+                    >
+                      ₹
+                      {walletEntries
+                        .reduce((s, e) => s + e.orderAmount, 0)
+                        .toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      All delivered orders
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-green-100 shadow-sm p-4">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                      Commission Earned
+                    </p>
+                    <p className="text-xl font-bold text-green-600">
+                      ₹
+                      {getTotalAdminCommission().toLocaleString("en-IN", {
+                        minimumFractionDigits: 0,
+                      })}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      10% of each order
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-amber-100 shadow-sm p-4">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                      Pending Payouts
+                    </p>
+                    <p className="text-xl font-bold text-amber-600">
+                      ₹
+                      {payoutRequests
+                        .filter((r) => r.status === "pending")
+                        .reduce((s, r) => s + r.requestedAmount, 0)
+                        .toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Awaiting approval
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                      Paid to Sellers
+                    </p>
+                    <p className="text-xl font-bold text-gray-700">
+                      ₹
+                      {payoutHistory
+                        .reduce((s, p) => s + p.paidAmount, 0)
+                        .toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Total disbursed
+                    </p>
+                  </div>
+                </div>
 
                 {payoutRequests.length === 0 ? (
                   <div
@@ -621,11 +886,262 @@ export default function AdminDashboard() {
             {activeTab === "products" && (
               <>
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                  All Products
+                  Product Management
                 </h2>
                 <p className="text-gray-500 text-sm mb-6">
-                  Manage marketplace products — delete demo or unwanted listings
+                  Upload new products or manage marketplace listings
                 </p>
+
+                {/* Admin Product Upload Form */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6 mb-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <Plus className="w-4 h-4" style={{ color: "#006AFF" }} />
+                    Add New Product
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="adminProductName"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Product Title
+                      </Label>
+                      <Input
+                        id="adminProductName"
+                        value={adminProductName}
+                        onChange={(e) =>
+                          setAdminProductName(e.target.value.slice(0, 110))
+                        }
+                        placeholder="Enter product title (max 110 chars)"
+                        data-ocid="admin.product_name.input"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Category
+                        </Label>
+                        <Select
+                          value={adminCategory}
+                          onValueChange={setAdminCategory}
+                        >
+                          <SelectTrigger data-ocid="admin.product_category.select">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="electronics">
+                              Electronics
+                            </SelectItem>
+                            <SelectItem value="fashion">Fashion</SelectItem>
+                            <SelectItem value="home">
+                              Home &amp; Kitchen
+                            </SelectItem>
+                            <SelectItem value="beauty">Beauty</SelectItem>
+                            <SelectItem value="sports">Sports</SelectItem>
+                            <SelectItem value="books">Books</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Price (₹)
+                        </Label>
+                        <Input
+                          type="number"
+                          value={adminPrice}
+                          onChange={(e) => setAdminPrice(e.target.value)}
+                          placeholder="0.00"
+                          disabled={adminVariantsEnabled}
+                          data-ocid="admin.product_price.input"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Description
+                      </Label>
+                      <Textarea
+                        value={adminDescription}
+                        onChange={(e) => setAdminDescription(e.target.value)}
+                        placeholder="Product description..."
+                        rows={3}
+                        className="resize-none"
+                        data-ocid="admin.product_description.textarea"
+                      />
+                    </div>
+                    {/* Variants Toggle */}
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="admin-variants-toggle"
+                        checked={adminVariantsEnabled}
+                        onCheckedChange={setAdminVariantsEnabled}
+                        style={{
+                          backgroundColor: adminVariantsEnabled
+                            ? "#006AFF"
+                            : undefined,
+                        }}
+                        data-ocid="admin.variants.switch"
+                      />
+                      <Label
+                        htmlFor="admin-variants-toggle"
+                        className="text-sm text-gray-700 cursor-pointer"
+                      >
+                        Enable Variants (Size / Colour)
+                      </Label>
+                    </div>
+                    {adminVariantsEnabled && (
+                      <div className="space-y-3">
+                        {adminVariantRows.map((row, i) => (
+                          <div
+                            key={row.id}
+                            className="grid gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                            style={{
+                              gridTemplateColumns:
+                                "80px 1fr 32px 36px 70px 90px 80px 32px",
+                            }}
+                            data-ocid={`admin.variants.item.${i + 1}`}
+                          >
+                            <Input
+                              placeholder="Size"
+                              value={row.size}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "size",
+                                  e.target.value,
+                                )
+                              }
+                              className="h-8 text-xs"
+                            />
+                            <Input
+                              placeholder="Color"
+                              value={row.color}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "color",
+                                  e.target.value,
+                                )
+                              }
+                              className="h-8 text-xs"
+                            />
+                            <input
+                              type="color"
+                              value={row.colorHex}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "colorHex",
+                                  e.target.value,
+                                )
+                              }
+                              className="w-8 h-8 rounded cursor-pointer border border-gray-200 p-0.5"
+                            />
+                            <SwatchImageUpload
+                              swatchImage={row.swatchImage || undefined}
+                              onUpload={(b64) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "swatchImage",
+                                  b64,
+                                )
+                              }
+                            />
+                            <Input
+                              placeholder="SKU"
+                              value={row.sku}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "sku",
+                                  e.target.value,
+                                )
+                              }
+                              className="h-8 text-xs"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="₹ Price"
+                              value={row.price}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "price",
+                                  e.target.value,
+                                )
+                              }
+                              className="h-8 text-xs"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Stock"
+                              value={row.stock}
+                              onChange={(e) =>
+                                updateAdminVariantRow(
+                                  row.id,
+                                  "stock",
+                                  e.target.value,
+                                )
+                              }
+                              className="h-8 text-xs"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeAdminVariantRow(row.id)}
+                              className="h-8 w-8 flex items-center justify-center rounded text-red-400 hover:bg-red-50"
+                              data-ocid={`admin.variants.delete_button.${i + 1}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addAdminVariantRow}
+                          style={{ borderColor: "#006AFF", color: "#006AFF" }}
+                          className="gap-1.5 text-xs border-dashed"
+                          data-ocid="admin.variants.add_button"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Variant
+                        </Button>
+                      </div>
+                    )}
+                    <ProductAdvancedSections
+                      state={adminAdvancedState}
+                      onChange={(patch) =>
+                        setAdminAdvancedState((prev) => ({ ...prev, ...patch }))
+                      }
+                      sellingPrice={Number.parseFloat(adminPrice) || 0}
+                      variantMinPrice={
+                        adminVariantsEnabled && adminVariantRows.length > 0
+                          ? Math.min(
+                              ...adminVariantRows
+                                .map((r) => Number.parseFloat(r.price) || 0)
+                                .filter(Boolean),
+                            )
+                          : undefined
+                      }
+                      commissionRate={getCategoryRate(adminCategory)}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAdminUpload}
+                      className="w-full gap-2 text-white font-semibold"
+                      style={{ backgroundColor: "#006AFF" }}
+                      data-ocid="admin.product.submit_button"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Add Product
+                    </Button>
+                  </div>
+                </div>
+
+                <h3 className="text-base font-semibold text-gray-800 mb-3">
+                  All Listings
+                </h3>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -727,6 +1243,97 @@ export default function AdminDashboard() {
                     </TableBody>
                   </Table>
                 </div>
+                {/* Payout History Section */}
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Payout History
+                  </h3>
+                  {payoutHistory.length === 0 ? (
+                    <div
+                      className="bg-white rounded-xl border border-gray-200 p-10 text-center"
+                      data-ocid="payout_history.empty_state"
+                    >
+                      <p className="text-gray-400 text-sm">
+                        No payout history yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                      data-ocid="payout_history.table"
+                    >
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-semibold text-gray-700">
+                                Transaction ID
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-700">
+                                Seller
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-700">
+                                Amount
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-700">
+                                Date
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-700">
+                                Payment Method
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {payoutHistory.map((ph, i) => (
+                              <TableRow
+                                key={ph.id}
+                                data-ocid={`payout_history.item.${i + 1}`}
+                              >
+                                <TableCell className="text-xs text-gray-500 font-mono">
+                                  {ph.transactionId}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium text-gray-800">
+                                      {ph.sellerName}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      {ph.sellerEmail}
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  ₹
+                                  {ph.paidAmount.toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </TableCell>
+                                <TableCell className="text-gray-600 text-sm">
+                                  {new Date(ph.paidAt).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100"
+                                    style={{ color: "#006AFF" }}
+                                  >
+                                    {ph.paymentMethod}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -744,45 +1351,132 @@ export default function AdminDashboard() {
                     Commission & Payout Settings
                   </h3>
 
-                  {/* Commission Rate */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label
-                        htmlFor="commissionRate"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Platform Commission Rate (%)
-                      </Label>
-                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                        Current: {commissionRate}%
-                      </span>
+                  {/* Category-Wise Commission Panel */}
+                  <div className="space-y-5">
+                    {/* Default Global Rate */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">
+                            Default Global Rate (%)
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Applied to any category without a specific rate
+                          </p>
+                        </div>
+                        <span className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-1 rounded font-medium">
+                          Current: {commissionRate}%
+                        </span>
+                      </div>
+                      <div className="flex gap-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.1}
+                          value={globalRateInput}
+                          onChange={(e) => setGlobalRateInput(e.target.value)}
+                          className="flex-1 h-9"
+                          placeholder="e.g. 10"
+                          data-ocid="settings.commission.input"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const val = Number.parseFloat(globalRateInput);
+                            if (Number.isNaN(val) || val < 0 || val > 100) {
+                              toast.error("Rate must be 0–100");
+                              return;
+                            }
+                            setCommissionRate(val);
+                            toast.success(`Default rate updated to ${val}%`);
+                          }}
+                          className="text-white h-9 px-4"
+                          style={{ backgroundColor: "#006AFF" }}
+                          data-ocid="settings.commission.save_button"
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-3">
-                      <Input
-                        id="commissionRate"
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={commissionInput}
-                        onChange={(e) => setCommissionInput(e.target.value)}
-                        className="flex-1"
-                        data-ocid="settings.commission.input"
-                      />
+
+                    {/* Per-Category Rates */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        Category-Specific Rates
+                      </p>
+                      <p className="text-xs text-gray-400 mb-4">
+                        Leave blank to use Default Global Rate. Enter "0" for
+                        zero commission.
+                      </p>
+                      <div className="space-y-3">
+                        {COMMISSION_CATEGORIES.map(({ key, label }) => {
+                          const currentVal = localCategoryRates[key];
+                          const hasOverride = typeof currentVal === "number";
+                          return (
+                            <div key={key} className="flex items-center gap-3">
+                              <div className="w-36 flex-shrink-0">
+                                <span className="text-sm text-gray-700 font-medium">
+                                  {label}
+                                </span>
+                              </div>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={0.1}
+                                value={hasOverride ? String(currentVal) : ""}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  if (raw === "") {
+                                    const next = { ...localCategoryRates };
+                                    delete next[key];
+                                    setLocalCategoryRates(next);
+                                  } else {
+                                    setLocalCategoryRates({
+                                      ...localCategoryRates,
+                                      [key]: Number.parseFloat(raw),
+                                    });
+                                  }
+                                }}
+                                className="h-8 text-sm flex-1"
+                                placeholder={`Default (${commissionRate}%)`}
+                                data-ocid={`settings.commission.${key}.input`}
+                              />
+                              {hasOverride && (
+                                <span
+                                  className={`text-xs font-semibold px-2 py-0.5 rounded ${currentVal === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
+                                >
+                                  {currentVal === 0
+                                    ? "0% (Free)"
+                                    : `${currentVal}%`}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                       <Button
                         type="button"
-                        onClick={handleSaveCommission}
-                        className="text-white"
+                        onClick={() => {
+                          for (const [k, v] of Object.entries(
+                            localCategoryRates,
+                          )) {
+                            if (Number.isNaN(v) || v < 0 || v > 100) {
+                              toast.error(`Invalid rate for category ${k}`);
+                              return;
+                            }
+                          }
+                          setCategoryRates(localCategoryRates);
+                          toast.success("Category commission rates saved!");
+                        }}
+                        className="w-full mt-4 text-white font-semibold"
                         style={{ backgroundColor: "#006AFF" }}
-                        data-ocid="settings.commission.save_button"
+                        data-ocid="settings.commission.save_all_button"
                       >
-                        Save
+                        Save All Category Rates
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-400">
-                      Sellers will receive{" "}
-                      {100 - Number.parseFloat(commissionInput || "10")}% of
-                      each order value after commission.
-                    </p>
                   </div>
 
                   {/* Min Payout */}
@@ -823,6 +1517,9 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
+                <div className="mt-6">
+                  <CourierSettingsSection />
+                </div>
               </div>
             )}
           </motion.div>
@@ -834,6 +1531,36 @@ export default function AdminDashboard() {
               transition={{ duration: 0.3 }}
             >
               <HomepageManagerTab />
+            </motion.div>
+          )}
+          {activeTab === "payment" && (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <PaymentSettingsTab />
+            </motion.div>
+          )}
+          {activeTab === "communication" && (
+            <motion.div
+              key="communication"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <CommunicationSettings />
+            </motion.div>
+          )}
+          {activeTab === "brand" && (
+            <motion.div
+              key="brand"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <BrandSettingsTab />
             </motion.div>
           )}
         </main>
@@ -860,6 +1587,23 @@ export default function AdminDashboard() {
               onChange={(e) => setPayoutAmountInput(e.target.value)}
               data-ocid="payout.input"
             />
+            <Label
+              htmlFor="paymentMethodSelect"
+              className="text-sm font-medium text-gray-700"
+            >
+              Payment Method
+            </Label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger id="paymentMethodSelect" data-ocid="payout.select">
+                <SelectValue placeholder="Select method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                <SelectItem value="UPI">UPI</SelectItem>
+                <SelectItem value="NEFT">NEFT</SelectItem>
+                <SelectItem value="IMPS">IMPS</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button

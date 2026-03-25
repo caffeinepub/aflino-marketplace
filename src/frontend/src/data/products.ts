@@ -5,6 +5,8 @@ export interface ProductVariant {
   colorHex: string;
   price: number;
   stock: number;
+  sku?: string;
+  swatchImage?: string;
 }
 
 export interface Product {
@@ -19,6 +21,26 @@ export interface Product {
   specifications?: Record<string, string>;
   variants?: ProductVariant[];
   images?: string[];
+  videoUrl?: string;
+  weight?: number;
+  weightUnit?: "kg" | "gm";
+  dimensionL?: number;
+  dimensionB?: number;
+  dimensionH?: number;
+  brandName?: string;
+  primaryMaterial?: string;
+  metalFabricType?: string;
+  finish?: string;
+  genericName?: string;
+  manufacturerDetails?: string;
+  packerImporterDetails?: string;
+  countryOfOrigin?: string;
+  hsnCode?: string;
+  gstRate?: 5 | 12 | 18 | 28;
+  whatInTheBox?: string[];
+  sizeChartImage?: string;
+  sellerState?: string;
+  sellerType?: "gstin" | "enrollmentId";
 }
 
 export const PRODUCTS: Product[] = [
@@ -26,6 +48,8 @@ export const PRODUCTS: Product[] = [
     id: 1,
     title: "Wireless Bluetooth Headphones",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 2499,
     stock: 50,
@@ -85,6 +109,8 @@ export const PRODUCTS: Product[] = [
     id: 2,
     title: "Smart LED Desk Lamp",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 1299,
     stock: 30,
@@ -100,6 +126,8 @@ export const PRODUCTS: Product[] = [
     id: 3,
     title: "USB-C Hub 7-in-1",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 1899,
     stock: 25,
@@ -115,6 +143,8 @@ export const PRODUCTS: Product[] = [
     id: 4,
     title: "Mechanical Keyboard RGB",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 3499,
     stock: 15,
@@ -131,6 +161,8 @@ export const PRODUCTS: Product[] = [
     id: 5,
     title: "Men's Casual Linen Shirt",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 899,
     stock: 100,
@@ -198,6 +230,8 @@ export const PRODUCTS: Product[] = [
     id: 6,
     title: "Women's Floral Maxi Dress",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 1499,
     stock: 80,
@@ -248,6 +282,8 @@ export const PRODUCTS: Product[] = [
     id: 7,
     title: "Unisex Canvas Sneakers",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 1199,
     stock: 60,
@@ -306,6 +342,8 @@ export const PRODUCTS: Product[] = [
     id: 8,
     title: "Ceramic Dinner Set (6pc)",
     seller: "HomeGoods Co.",
+    sellerState: "Delhi",
+    sellerType: "gstin",
     category: "Home & Kitchen",
     price: 2199,
     stock: 20,
@@ -321,6 +359,8 @@ export const PRODUCTS: Product[] = [
     id: 9,
     title: "Bamboo Cutting Board",
     seller: "HomeGoods Co.",
+    sellerState: "Delhi",
+    sellerType: "gstin",
     category: "Home & Kitchen",
     price: 499,
     stock: 45,
@@ -336,6 +376,8 @@ export const PRODUCTS: Product[] = [
     id: 10,
     title: "Aromatherapy Diffuser",
     seller: "HomeGoods Co.",
+    sellerState: "Delhi",
+    sellerType: "gstin",
     category: "Beauty",
     price: 1099,
     stock: 35,
@@ -351,6 +393,8 @@ export const PRODUCTS: Product[] = [
     id: 11,
     title: "ProMax Smartphone 5G",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 10000,
     stock: 50,
@@ -411,6 +455,8 @@ export const PRODUCTS: Product[] = [
     id: 12,
     title: "Samsung Double Door Refrigerator",
     seller: "HomeGoods Co.",
+    sellerState: "Delhi",
+    sellerType: "gstin",
     category: "Home & Kitchen",
     price: 28000,
     stock: 10,
@@ -478,10 +524,28 @@ export const PRODUCTS: Product[] = [
     id: 13,
     title: "Samsung Galaxy M35 5G",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 14999,
     stock: 50,
     rating: 4.4,
+    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    weight: 0.2,
+    weightUnit: "kg",
+    brandName: "Samsung",
+    countryOfOrigin: "India",
+    gstRate: 18,
+    hsnCode: "8517",
+    whatInTheBox: [
+      "1× Samsung Galaxy M35 5G",
+      "1× USB-C Cable",
+      "1× 25W Charger",
+      "1× User Manual",
+      "1× Warranty Card",
+    ],
+    manufacturerDetails:
+      "Samsung India Electronics Pvt. Ltd., 6th Floor, DLF Centre, Sansad Marg, New Delhi - 110001",
     description:
       "Samsung Galaxy M35 5G features a powerful Exynos 1380 processor with 6000mAh battery. Perfect for gaming and heavy usage with 50MP camera system.",
     specifications: {
@@ -537,6 +601,8 @@ export const PRODUCTS: Product[] = [
     id: 14,
     title: "Apple iPhone 15 (128GB)",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 69999,
     stock: 30,
@@ -604,6 +670,8 @@ export const PRODUCTS: Product[] = [
     id: 15,
     title: "HP Pavilion 15 Laptop",
     seller: "TechZone Store",
+    sellerState: "Maharashtra",
+    sellerType: "gstin",
     category: "Electronics",
     price: 54999,
     stock: 20,
@@ -654,6 +722,8 @@ export const PRODUCTS: Product[] = [
     id: 16,
     title: "Puma Men's Graphic T-Shirt",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 699,
     stock: 100,
@@ -759,6 +829,8 @@ export const PRODUCTS: Product[] = [
     id: 17,
     title: "Levi's Style Men's Slim Fit Jeans",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 1499,
     stock: 80,
@@ -848,6 +920,8 @@ export const PRODUCTS: Product[] = [
     id: 18,
     title: "Adidas Ultraboost 22 Running Shoes",
     seller: "Fashion Hub",
+    sellerState: "Karnataka",
+    sellerType: "gstin",
     category: "Fashion",
     price: 8999,
     stock: 60,

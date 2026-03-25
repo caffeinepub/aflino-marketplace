@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useProducts } from "@/context/ProductContext";
 import { CATEGORIES, type Product } from "@/data/products";
 import { addToHistory } from "@/utils/browsingHistory";
@@ -366,7 +367,16 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
     }
   }
 
-  const filtered = products.filter((p) => {
+  const { customerState } = useGeoLocation();
+
+  // Geo-fence: hide local seller products if state doesn't match
+  const geoFiltered = products.filter((product) => {
+    if (!product.sellerType || product.sellerType === "gstin") return true;
+    if (customerState && product.sellerState === customerState) return true;
+    return false;
+  });
+
+  const filtered = geoFiltered.filter((p) => {
     const effectivePrice = p.variants?.length
       ? Math.min(...p.variants.map((v) => v.price))
       : p.price;

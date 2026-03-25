@@ -1,10 +1,57 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useSellerContext } from "@/context/SellerContext";
 import { ArrowLeft, CheckCircle2, Store } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
 
 interface Props {
   onBack: () => void;
@@ -14,8 +61,14 @@ export default function SellerRegistrationPage({ onBack }: Props) {
   const { registerSeller } = useSellerContext();
   const [form, setForm] = useState({
     businessName: "",
-    gst: "",
+    gstin: "",
+    pan: "",
+    enrollmentId: "",
+    taxType: "gstin" as "gstin" | "enrollmentId",
     email: "",
+    phone: "",
+    fullAddress: "",
+    state: "",
     password: "",
     confirmPassword: "",
   });
@@ -30,8 +83,20 @@ export default function SellerRegistrationPage({ onBack }: Props) {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.businessName.trim()) e.businessName = "Business name is required";
-    if (!form.gst.trim()) e.gst = "GST number is required";
     if (!form.email.trim()) e.email = "Email is required";
+    if (!form.phone.trim()) e.phone = "Phone number is required";
+    else if (!/^\d{10}$/.test(form.phone.trim()))
+      e.phone = "Enter a valid 10-digit phone number";
+    if (!form.fullAddress.trim())
+      e.fullAddress = "Business address is required";
+    if (!form.state) e.state = "State is required";
+    if (form.taxType === "gstin") {
+      if (!form.gstin.trim()) e.gstin = "GSTIN is required";
+      if (!form.pan.trim()) e.pan = "PAN is required";
+    } else {
+      if (!form.enrollmentId.trim())
+        e.enrollmentId = "Enrolment ID is required";
+    }
     if (!form.password) e.password = "Password is required";
     if (form.password !== form.confirmPassword)
       e.confirmPassword = "Passwords do not match";
@@ -47,8 +112,15 @@ export default function SellerRegistrationPage({ onBack }: Props) {
     }
     registerSeller({
       businessName: form.businessName,
-      gst: form.gst,
+      gstin: form.taxType === "gstin" ? form.gstin : "",
+      pan: form.taxType === "gstin" ? form.pan : "",
       email: form.email,
+      phone: form.phone,
+      fullAddress: form.fullAddress,
+      state: form.state,
+      sellerType: form.taxType,
+      enrollmentId:
+        form.taxType === "enrollmentId" ? form.enrollmentId : undefined,
     });
     setSubmitted(true);
   };
@@ -79,7 +151,7 @@ export default function SellerRegistrationPage({ onBack }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="w-full max-w-md"
+          className="w-full max-w-lg"
         >
           {submitted ? (
             <motion.div
@@ -130,6 +202,7 @@ export default function SellerRegistrationPage({ onBack }: Props) {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Business Name */}
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="businessName"
@@ -154,30 +227,237 @@ export default function SellerRegistrationPage({ onBack }: Props) {
                   )}
                 </div>
 
+                {/* Phone */}
                 <div className="space-y-1.5">
                   <Label
-                    htmlFor="gst"
+                    htmlFor="phone"
                     className="text-sm font-medium text-gray-700"
                   >
-                    GST Number <span className="text-red-500">*</span>
+                    Phone Number <span className="text-red-500">*</span>
                   </Label>
                   <Input
-                    id="gst"
-                    placeholder="e.g. 27ABCDE1234F1Z5"
-                    value={form.gst}
-                    onChange={(e) => set("gst", e.target.value)}
-                    data-ocid="seller_reg.gst.input"
+                    id="phone"
+                    type="tel"
+                    placeholder="10-digit mobile number"
+                    maxLength={10}
+                    value={form.phone}
+                    onChange={(e) => set("phone", e.target.value)}
+                    data-ocid="seller_reg.phone.input"
                   />
-                  {errors.gst && (
+                  {errors.phone && (
                     <p
                       className="text-xs text-red-500"
-                      data-ocid="seller_reg.gst.error_state"
+                      data-ocid="seller_reg.phone.error_state"
                     >
-                      {errors.gst}
+                      {errors.phone}
                     </p>
                   )}
                 </div>
 
+                {/* Full Business Address */}
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="fullAddress"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Full Business Address{" "}
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="fullAddress"
+                    rows={3}
+                    placeholder="Building/Floor, Street, Area, City - PIN Code"
+                    value={form.fullAddress}
+                    onChange={(e) => set("fullAddress", e.target.value)}
+                    data-ocid="seller_reg.full_address.textarea"
+                  />
+                  {errors.fullAddress && (
+                    <p
+                      className="text-xs text-red-500"
+                      data-ocid="seller_reg.full_address.error_state"
+                    >
+                      {errors.fullAddress}
+                    </p>
+                  )}
+                </div>
+
+                {/* State */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">
+                    State <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={form.state}
+                    onValueChange={(v) => set("state", v)}
+                  >
+                    <SelectTrigger data-ocid="seller_reg.state.select">
+                      <SelectValue placeholder="Select your state" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {INDIAN_STATES.map((st) => (
+                        <SelectItem key={st} value={st}>
+                          {st}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.state && (
+                    <p
+                      className="text-xs text-red-500"
+                      data-ocid="seller_reg.state.error_state"
+                    >
+                      {errors.state}
+                    </p>
+                  )}
+                </div>
+
+                {/* Tax Registration Toggle */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Tax Registration <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="flex flex-col gap-2">
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${form.taxType === "gstin" ? "border-[#006AFF] bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+                      data-ocid="seller_reg.tax_type_gstin.radio"
+                    >
+                      <input
+                        type="radio"
+                        name="taxType"
+                        value="gstin"
+                        checked={form.taxType === "gstin"}
+                        onChange={() => set("taxType", "gstin")}
+                        className="mt-0.5 accent-[#006AFF]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          Yes, I have GSTIN
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Recommended — Sell Pan-India
+                        </p>
+                      </div>
+                    </label>
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${form.taxType === "enrollmentId" ? "border-orange-400 bg-orange-50" : "border-gray-200 hover:border-gray-300"}`}
+                      data-ocid="seller_reg.tax_type_enrollment.radio"
+                    >
+                      <input
+                        type="radio"
+                        name="taxType"
+                        value="enrollmentId"
+                        checked={form.taxType === "enrollmentId"}
+                        onChange={() => set("taxType", "enrollmentId")}
+                        className="mt-0.5 accent-orange-500"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          No, I have Enrolment ID
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Local state selling only
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* GSTIN + PAN (shown when taxType = gstin) */}
+                {form.taxType === "gstin" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="gstin"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        GSTIN <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="gstin"
+                        placeholder="e.g. 22AAAAA0000A1Z5"
+                        value={form.gstin}
+                        onChange={(e) =>
+                          set("gstin", e.target.value.toUpperCase())
+                        }
+                        data-ocid="seller_reg.gstin.input"
+                      />
+                      {errors.gstin && (
+                        <p
+                          className="text-xs text-red-500"
+                          data-ocid="seller_reg.gstin.error_state"
+                        >
+                          {errors.gstin}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="pan"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        PAN <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pan"
+                        placeholder="e.g. AAAAA0000A"
+                        value={form.pan}
+                        onChange={(e) =>
+                          set("pan", e.target.value.toUpperCase())
+                        }
+                        data-ocid="seller_reg.pan.input"
+                      />
+                      {errors.pan && (
+                        <p
+                          className="text-xs text-red-500"
+                          data-ocid="seller_reg.pan.error_state"
+                        >
+                          {errors.pan}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Enrolment ID (shown when taxType = enrollmentId) */}
+                {form.taxType === "enrollmentId" && (
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="enrollmentId"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Enrolment ID <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="enrollmentId"
+                      placeholder="e.g. ENR-2024-WB-001234"
+                      value={form.enrollmentId}
+                      onChange={(e) => set("enrollmentId", e.target.value)}
+                      data-ocid="seller_reg.enrollment_id.input"
+                    />
+                    {errors.enrollmentId && (
+                      <p
+                        className="text-xs text-red-500"
+                        data-ocid="seller_reg.enrollment_id.error_state"
+                      >
+                        {errors.enrollmentId}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400">
+                      Don&apos;t have an ID?{" "}
+                      <a
+                        href="https://services.gst.gov.in/services/enrolment-details-ucomm"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#006AFF] hover:underline font-medium"
+                        data-ocid="seller_reg.gst_portal.link"
+                      >
+                        Apply on GST Portal
+                      </a>
+                    </p>
+                  </div>
+                )}
+
+                {/* Email */}
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="email"
@@ -203,6 +483,7 @@ export default function SellerRegistrationPage({ onBack }: Props) {
                   )}
                 </div>
 
+                {/* Password */}
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="password"
@@ -228,6 +509,7 @@ export default function SellerRegistrationPage({ onBack }: Props) {
                   )}
                 </div>
 
+                {/* Confirm Password */}
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="confirmPassword"

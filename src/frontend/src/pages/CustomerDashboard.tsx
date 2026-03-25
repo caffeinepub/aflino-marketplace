@@ -1,9 +1,11 @@
+import InvoiceButton from "@/components/InvoiceButton";
 import { Button } from "@/components/ui/button";
 import {
   type OrderStatus,
   useOrderTracking,
 } from "@/context/OrderTrackingContext";
 import { useRole } from "@/context/RoleContext";
+import { useSellerContext } from "@/context/SellerContext";
 import {
   CheckCircle,
   Heart,
@@ -50,7 +52,6 @@ function OrderTimeline({ status }: { status: OrderStatus }) {
 
           return (
             <div key={step.status} className="flex items-center flex-1">
-              {/* Step node */}
               <div className="flex flex-col items-center gap-1.5 min-w-[52px]">
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
@@ -74,7 +75,6 @@ function OrderTimeline({ status }: { status: OrderStatus }) {
                 </span>
               </div>
 
-              {/* Connector */}
               {!isLast && (
                 <div
                   className="h-0.5 flex-1 mx-1 rounded-full transition-all"
@@ -91,9 +91,12 @@ function OrderTimeline({ status }: { status: OrderStatus }) {
   );
 }
 
-export default function CustomerDashboard() {
+export default function CustomerDashboard({
+  onCheckout,
+}: { onCheckout?: () => void }) {
   const { logout } = useRole();
   const { orders } = useOrderTracking();
+  const { getSellerByEmail } = useSellerContext();
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -130,6 +133,18 @@ export default function CustomerDashboard() {
             <ShoppingBag className="w-4 h-4" />
             Browse Products
           </button>
+          {onCheckout && (
+            <button
+              type="button"
+              onClick={onCheckout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white text-sm mt-2 font-semibold transition-colors"
+              style={{ background: "#006AFF" }}
+              data-ocid="customer.checkout.button"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Checkout
+            </button>
+          )}
         </nav>
       </aside>
 
@@ -165,45 +180,54 @@ export default function CustomerDashboard() {
             </p>
 
             <div className="space-y-4">
-              {orders.map((order, i) => (
-                <motion.div
-                  key={order.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.25, delay: i * 0.07 }}
-                  className="bg-white rounded-xl border border-gray-200 shadow-xs p-5"
-                  data-ocid={`orders.item.${i + 1}`}
-                >
-                  {/* Order header row */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: "#FFF0F6" }}
-                      >
-                        <Truck
-                          className="w-5 h-5"
-                          style={{ color: "#FF1B8D" }}
+              {orders.map((order, i) => {
+                const sellerProfile = getSellerByEmail(order.sellerEmail);
+                return (
+                  <motion.div
+                    key={order.id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.25, delay: i * 0.07 }}
+                    className="bg-white rounded-xl border border-gray-200 shadow-xs p-5"
+                    data-ocid={`orders.item.${i + 1}`}
+                  >
+                    {/* Order header row */}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: "#FFF0F6" }}
+                        >
+                          <Truck
+                            className="w-5 h-5"
+                            style={{ color: "#FF1B8D" }}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 text-sm">
+                            {order.product}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {order.id} &middot; {order.date}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="font-semibold text-gray-700 text-sm">
+                          {order.amount}
+                        </span>
+                        <InvoiceButton
+                          order={order}
+                          sellerProfile={sellerProfile}
                         />
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">
-                          {order.product}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {order.id} &middot; {order.date}
-                        </p>
-                      </div>
                     </div>
-                    <span className="font-semibold text-gray-700 text-sm flex-shrink-0">
-                      {order.amount}
-                    </span>
-                  </div>
 
-                  {/* Tracking timeline */}
-                  <OrderTimeline status={order.status} />
-                </motion.div>
-              ))}
+                    {/* Tracking timeline */}
+                    <OrderTimeline status={order.status} />
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         </main>

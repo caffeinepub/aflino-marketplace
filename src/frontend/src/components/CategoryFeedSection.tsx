@@ -1,3 +1,4 @@
+import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useProducts } from "@/context/ProductContext";
 import { addToHistory } from "@/utils/browsingHistory";
 import { Star } from "lucide-react";
@@ -51,8 +52,16 @@ export default function CategoryFeedSection({
     return () => clearTimeout(timer);
   }, []);
 
+  const { customerState } = useGeoLocation();
+
   const categoryProducts = products
-    .filter((p) => p.category === categoryName)
+    .filter((p) => {
+      if (p.category !== categoryName) return false;
+      // Geo-fence: hide local products from other states
+      if (!p.sellerType || p.sellerType === "gstin") return true;
+      if (customerState && p.sellerState === customerState) return true;
+      return false;
+    })
     .slice(0, 8);
 
   if (!loading && categoryProducts.length === 0) return null;

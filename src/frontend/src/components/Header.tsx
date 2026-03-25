@@ -1,11 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { useGeoLocation } from "@/context/GeoLocationContext";
 import { PRODUCTS } from "@/data/products";
 import {
   Camera,
+  ChevronDown,
   Globe,
   Heart,
+  MapPin,
   Menu,
   Mic,
+  Navigation,
   Search,
   SlidersHorizontal,
   X,
@@ -136,11 +140,117 @@ function SearchBox({
   );
 }
 
+function LocationPill() {
+  const { customerState, setCustomerState, requestLocation, indianStates } =
+    useGeoLocation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors hover:bg-blue-50"
+        style={{ borderColor: "#006AFF", color: "#006AFF" }}
+        data-ocid="header.location.button"
+      >
+        <MapPin className="w-3 h-3 flex-shrink-0" />
+        <span className="max-w-[80px] truncate">
+          {customerState || "Select Location"}
+        </span>
+        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full right-0 mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+            data-ocid="header.location.popover"
+          >
+            <div className="p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  requestLocation();
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg hover:bg-blue-50 transition-colors text-left"
+                style={{ color: "#006AFF" }}
+                data-ocid="header.location.use_my_location.button"
+              >
+                <Navigation className="w-3 h-3" />
+                Use My Location
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomerState(null);
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors text-left text-gray-600"
+                data-ocid="header.location.all_india.button"
+              >
+                🇮🇳 All India (GST products)
+              </button>
+              <div className="h-px bg-gray-100 my-1" />
+              <div className="max-h-48 overflow-y-auto">
+                {indianStates.map((state) => (
+                  <button
+                    key={state}
+                    type="button"
+                    onClick={() => {
+                      setCustomerState(state);
+                      setOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors text-left ${
+                      customerState === state
+                        ? "font-semibold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    style={
+                      customerState === state
+                        ? { color: "#006AFF", backgroundColor: "#EEF4FF" }
+                        : {}
+                    }
+                  >
+                    {customerState === state && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                    )}
+                    {state}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   const [activeLink, setActiveLink] = useState("Home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
+  const { customerState, setCustomerState, requestLocation, indianStates } =
+    useGeoLocation();
+  const [mobilePicker, setMobilePicker] = useState(false);
 
   function openFilters() {
     setMobileOpen(false);
@@ -149,7 +259,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      {/* Row 1: Logo + nav + icons + auth */}
+      {/* Row 1: Logo + nav + location + icons + auth */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <div className="flex items-center gap-3 h-[52px]">
           {/* Logo */}
@@ -187,6 +297,11 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
           </nav>
 
           <div className="flex-1" />
+
+          {/* Location pill - desktop */}
+          <div className="hidden md:block">
+            <LocationPill />
+          </div>
 
           {/* Right icons */}
           <div className="hidden md:flex items-center gap-1">
@@ -281,6 +396,82 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                 placeholder="Search products…"
                 ocid="mobile.search_input"
               />
+            </div>
+
+            {/* Mobile Location Picker */}
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setMobilePicker((o) => !o)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors text-left"
+                style={{ borderColor: "#006AFF", color: "#006AFF" }}
+                data-ocid="mobile.location.button"
+              >
+                <MapPin className="w-4 h-4" />
+                {customerState || "Select Location"}
+                <ChevronDown className="w-3 h-3 ml-auto" />
+              </button>
+              <AnimatePresence>
+                {mobilePicker && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-gray-50 rounded-lg p-2 flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          requestLocation();
+                          setMobilePicker(false);
+                          setMobileOpen(false);
+                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold rounded hover:bg-blue-50 text-left"
+                        style={{ color: "#006AFF" }}
+                      >
+                        <Navigation className="w-3 h-3" /> Use My Location
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerState(null);
+                          setMobilePicker(false);
+                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium rounded hover:bg-gray-100 text-left text-gray-600"
+                      >
+                        🇮🇳 All India
+                      </button>
+                      <div className="h-px bg-gray-200 my-0.5" />
+                      {indianStates.map((state) => (
+                        <button
+                          key={state}
+                          type="button"
+                          onClick={() => {
+                            setCustomerState(state);
+                            setMobilePicker(false);
+                          }}
+                          className={`px-2 py-1.5 text-xs rounded text-left transition-colors ${
+                            customerState === state
+                              ? "font-semibold"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                          style={
+                            customerState === state
+                              ? {
+                                  color: "#006AFF",
+                                  backgroundColor: "#EEF4FF",
+                                }
+                              : {}
+                          }
+                        >
+                          {state}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {navLinks.map((link) => (

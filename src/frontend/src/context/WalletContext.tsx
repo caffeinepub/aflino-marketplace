@@ -1,12 +1,18 @@
 import { createContext, useContext, useState } from "react";
 
-export interface DeliveredOrder {
+export interface WalletEntry {
   id: string;
+  orderId: string;
   sellerEmail: string;
   sellerName: string;
   productName: string;
   orderAmount: number;
+  commission: number;
+  netEarning: number;
   deliveredAt: string;
+  shippingFee?: number;
+  category?: string;
+  commissionRateApplied?: number;
 }
 
 export interface PayoutRequest {
@@ -24,78 +30,137 @@ export interface PayoutHistory {
   sellerName: string;
   paidAmount: number;
   paidAt: string;
+  transactionId: string;
+  paymentMethod: string;
+}
+
+const HOLDING_DAYS = 15;
+
+function isPastHolding(deliveredAt: string): boolean {
+  const ms = HOLDING_DAYS * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(deliveredAt).getTime() >= ms;
 }
 
 interface WalletContextValue {
   commissionRate: number;
   minPayoutAmount: number;
-  deliveredOrders: DeliveredOrder[];
+  walletEntries: WalletEntry[];
   payoutRequests: PayoutRequest[];
   payoutHistory: PayoutHistory[];
+  categoryRates: Record<string, number>;
   setCommissionRate: (rate: number) => void;
   setMinPayoutAmount: (amount: number) => void;
-  getSellerEarnings: (email: string) => number;
+  setCategoryRates: (rates: Record<string, number>) => void;
+  getCategoryRate: (category: string) => number;
+  addWalletEntry: (
+    entry: Omit<WalletEntry, "id" | "commission" | "netEarning">,
+  ) => void;
   getSellerPendingBalance: (email: string) => number;
+  getSellerAvailableBalance: (email: string) => number;
+  getTotalAdminCommission: () => number;
   requestPayout: (sellerEmail: string, sellerName: string) => void;
-  approvePayout: (requestId: string, paidAmount: number) => void;
+  approvePayout: (
+    requestId: string,
+    paidAmount: number,
+    paymentMethod: string,
+  ) => void;
   rejectPayout: (requestId: string) => void;
 }
 
 const WalletContext = createContext<WalletContextValue>({
   commissionRate: 10,
   minPayoutAmount: 500,
-  deliveredOrders: [],
+  walletEntries: [],
   payoutRequests: [],
   payoutHistory: [],
+  categoryRates: {},
   setCommissionRate: () => {},
   setMinPayoutAmount: () => {},
-  getSellerEarnings: () => 0,
+  setCategoryRates: () => {},
+  getCategoryRate: () => 10,
+  addWalletEntry: () => {},
   getSellerPendingBalance: () => 0,
+  getSellerAvailableBalance: () => 0,
+  getTotalAdminCommission: () => 0,
   requestPayout: () => {},
   approvePayout: () => {},
   rejectPayout: () => {},
 });
 
-const INITIAL_DELIVERED_ORDERS: DeliveredOrder[] = [
+function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+}
+
+const INITIAL_WALLET_ENTRIES: WalletEntry[] = [
   {
-    id: "order-1",
+    id: "we-1",
+    orderId: "order-1",
     sellerEmail: "techzone@aflino.com",
     sellerName: "TechZone Store",
     productName: "Wireless Bluetooth Headphones",
     orderAmount: 2999,
-    deliveredAt: "2026-03-10T14:00:00Z",
+    commission: 299.9,
+    netEarning: 2699.1,
+    deliveredAt: daysAgo(20),
+    shippingFee: 50,
+    category: "electronics",
+    commissionRateApplied: 10,
   },
   {
-    id: "order-2",
+    id: "we-2",
+    orderId: "order-2",
     sellerEmail: "techzone@aflino.com",
     sellerName: "TechZone Store",
     productName: "USB-C Fast Charging Hub",
     orderAmount: 1499,
-    deliveredAt: "2026-03-14T10:30:00Z",
+    commission: 149.9,
+    netEarning: 1349.1,
+    deliveredAt: daysAgo(18),
+    shippingFee: 50,
+    category: "gadgets",
+    commissionRateApplied: 10,
   },
   {
-    id: "order-3",
+    id: "we-3",
+    orderId: "order-3",
     sellerEmail: "fashionhub@aflino.com",
     sellerName: "Fashion Hub",
     productName: "Floral Summer Dress",
     orderAmount: 1999,
-    deliveredAt: "2026-03-12T09:15:00Z",
+    commission: 199.9,
+    netEarning: 1799.1,
+    deliveredAt: daysAgo(7),
+    shippingFee: 70,
+    category: "fashion",
+    commissionRateApplied: 10,
   },
   {
-    id: "order-4",
+    id: "we-4",
+    orderId: "order-4",
     sellerEmail: "fashionhub@aflino.com",
     sellerName: "Fashion Hub",
     productName: "Men's Casual Sneakers",
     orderAmount: 899,
-    deliveredAt: "2026-03-16T17:45:00Z",
+    commission: 89.9,
+    netEarning: 809.1,
+    deliveredAt: daysAgo(3),
+    shippingFee: 50,
+    category: "fashion",
+    commissionRateApplied: 10,
   },
   {
-    id: "order-5",
+    id: "we-5",
+    orderId: "order-5",
     sellerEmail: "homegoods@aflino.com",
     sellerName: "HomeGoods Co.",
     productName: "Premium Non-Stick Cookware Set",
     orderAmount: 3499,
-    deliveredAt: "2026-03-18T12:00:00Z",
+    commission: 349.9,
+    netEarning: 3149.1,
+    deliveredAt: daysAgo(5),
+    shippingFee: 90,
+    category: "home",
+    commissionRateApplied: 10,
   },
 ];
 
@@ -105,7 +170,9 @@ const INITIAL_PAYOUT_HISTORY: PayoutHistory[] = [
     sellerEmail: "techzone@aflino.com",
     sellerName: "TechZone Store",
     paidAmount: 2000,
-    paidAt: "2026-03-15T11:00:00Z",
+    paidAt: daysAgo(2),
+    transactionId: "TXN-2026-03150001",
+    paymentMethod: "Bank Transfer",
   },
 ];
 
@@ -114,8 +181,8 @@ const INITIAL_PAYOUT_REQUESTS: PayoutRequest[] = [
     id: "req-1",
     sellerEmail: "fashionhub@aflino.com",
     sellerName: "Fashion Hub",
-    requestedAmount: 2607.3,
-    requestedAt: "2026-03-19T08:00:00Z",
+    requestedAmount: 1799.1,
+    requestedAt: daysAgo(1),
     status: "pending",
   },
 ];
@@ -123,8 +190,11 @@ const INITIAL_PAYOUT_REQUESTS: PayoutRequest[] = [
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [commissionRate, setCommissionRate] = useState(10);
   const [minPayoutAmount, setMinPayoutAmount] = useState(500);
-  const [deliveredOrders] = useState<DeliveredOrder[]>(
-    INITIAL_DELIVERED_ORDERS,
+  const [categoryRates, setCategoryRates] = useState<Record<string, number>>(
+    {},
+  );
+  const [walletEntries, setWalletEntries] = useState<WalletEntry[]>(
+    INITIAL_WALLET_ENTRIES,
   );
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>(
     INITIAL_PAYOUT_REQUESTS,
@@ -133,34 +203,79 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     INITIAL_PAYOUT_HISTORY,
   );
 
-  const getSellerEarnings = (email: string) => {
-    return deliveredOrders
-      .filter((o) => o.sellerEmail === email)
-      .reduce((sum, o) => sum + o.orderAmount * (1 - commissionRate / 100), 0);
+  const getCategoryRate = (category: string): number => {
+    if (category && typeof categoryRates[category] === "number") {
+      return categoryRates[category];
+    }
+    return commissionRate;
   };
 
-  const getSellerPendingBalance = (email: string) => {
-    const earnings = getSellerEarnings(email);
-    const paid = payoutHistory
+  const addWalletEntry = (
+    entry: Omit<WalletEntry, "id" | "commission" | "netEarning">,
+  ) => {
+    // Compute rate BEFORE the setState callback to capture in closure correctly
+    const rate = getCategoryRate(entry.category ?? "");
+    setWalletEntries((prev) => {
+      if (prev.some((e) => e.orderId === entry.orderId)) return prev;
+      const commission = Number.parseFloat(
+        (entry.orderAmount * (rate / 100)).toFixed(2),
+      );
+      const netEarning = Number.parseFloat(
+        (entry.orderAmount - commission).toFixed(2),
+      );
+      return [
+        ...prev,
+        {
+          ...entry,
+          id: `we-${Date.now()}`,
+          commission,
+          netEarning,
+          commissionRateApplied: rate,
+        },
+      ];
+    });
+  };
+
+  const getSellerPendingBalance = (email: string): number => {
+    return walletEntries
+      .filter((e) => e.sellerEmail === email && !isPastHolding(e.deliveredAt))
+      .reduce((sum, e) => sum + e.netEarning, 0);
+  };
+
+  const getSellerAvailableBalance = (email: string): number => {
+    const releasedEarnings = walletEntries
+      .filter((e) => e.sellerEmail === email && isPastHolding(e.deliveredAt))
+      .reduce((sum, e) => sum + e.netEarning, 0);
+    const totalPaid = payoutHistory
       .filter((p) => p.sellerEmail === email)
       .reduce((sum, p) => sum + p.paidAmount, 0);
-    return Math.max(0, earnings - paid);
+    return Math.max(0, releasedEarnings - totalPaid);
+  };
+
+  const getTotalAdminCommission = (): number => {
+    return walletEntries.reduce((sum, e) => sum + e.commission, 0);
   };
 
   const requestPayout = (sellerEmail: string, sellerName: string) => {
-    const amount = getSellerPendingBalance(sellerEmail);
-    const newRequest: PayoutRequest = {
-      id: `req-${Date.now()}`,
-      sellerEmail,
-      sellerName,
-      requestedAmount: amount,
-      requestedAt: new Date().toISOString(),
-      status: "pending",
-    };
-    setPayoutRequests((prev) => [...prev, newRequest]);
+    const amount = getSellerAvailableBalance(sellerEmail);
+    setPayoutRequests((prev) => [
+      ...prev,
+      {
+        id: `req-${Date.now()}`,
+        sellerEmail,
+        sellerName,
+        requestedAmount: amount,
+        requestedAt: new Date().toISOString(),
+        status: "pending",
+      },
+    ]);
   };
 
-  const approvePayout = (requestId: string, paidAmount: number) => {
+  const approvePayout = (
+    requestId: string,
+    paidAmount: number,
+    paymentMethod: string,
+  ) => {
     setPayoutRequests((prev) =>
       prev.map((r) =>
         r.id === requestId ? { ...r, status: "approved" as const } : r,
@@ -176,6 +291,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           sellerName: req.sellerName,
           paidAmount,
           paidAt: new Date().toISOString(),
+          transactionId: `TXN-${Date.now()}`,
+          paymentMethod,
         },
       ]);
     }
@@ -194,13 +311,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       value={{
         commissionRate,
         minPayoutAmount,
-        deliveredOrders,
+        walletEntries,
         payoutRequests,
         payoutHistory,
+        categoryRates,
         setCommissionRate,
         setMinPayoutAmount,
-        getSellerEarnings,
+        setCategoryRates,
+        getCategoryRate,
+        addWalletEntry,
         getSellerPendingBalance,
+        getSellerAvailableBalance,
+        getTotalAdminCommission,
         requestPayout,
         rejectPayout,
         approvePayout,

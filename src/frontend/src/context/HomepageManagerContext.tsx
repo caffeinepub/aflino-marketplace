@@ -33,9 +33,26 @@ export interface HomepageBrand {
   enabled: boolean;
 }
 
+export interface CategoryFeedConfig {
+  id: string;
+  categoryName: string;
+  title: string;
+  enabled: boolean;
+  order: number;
+}
+
+export interface HomepageSection {
+  id: string;
+  key: "banners" | "categories" | "brands" | "feeds" | "recently_viewed";
+  label: string;
+  order: number;
+}
+
 const LS_BANNERS = "aflino_homepage_banners";
 const LS_CATEGORIES = "aflino_homepage_categories";
 const LS_BRANDS = "aflino_homepage_brands";
+const LS_FEEDS = "aflino_homepage_feeds";
+const LS_SECTIONS = "aflino_homepage_sections";
 
 const DEFAULT_BANNERS: HomepageBanner[] = [
   {
@@ -289,6 +306,64 @@ const DEFAULT_BRANDS: HomepageBrand[] = [
   },
 ];
 
+const DEFAULT_FEEDS: CategoryFeedConfig[] = [
+  {
+    id: "f1",
+    categoryName: "Electronics",
+    title: "Top Picks in Electronics",
+    enabled: true,
+    order: 0,
+  },
+  {
+    id: "f2",
+    categoryName: "Fashion",
+    title: "New in Fashion",
+    enabled: true,
+    order: 1,
+  },
+  {
+    id: "f3",
+    categoryName: "Home & Kitchen",
+    title: "Top in Home & Kitchen",
+    enabled: true,
+    order: 2,
+  },
+  {
+    id: "f4",
+    categoryName: "Mobiles",
+    title: "Latest Mobiles",
+    enabled: false,
+    order: 3,
+  },
+  {
+    id: "f5",
+    categoryName: "Sports",
+    title: "Top in Sports",
+    enabled: false,
+    order: 4,
+  },
+  {
+    id: "f6",
+    categoryName: "Beauty",
+    title: "Beauty & Wellness",
+    enabled: false,
+    order: 5,
+  },
+];
+
+const DEFAULT_SECTIONS: HomepageSection[] = [
+  { id: "s1", key: "categories", label: "Category Circles", order: 0 },
+  { id: "s2", key: "banners", label: "Hero Banner Carousel", order: 1 },
+  { id: "s3", key: "brands", label: "Curated Brands", order: 2 },
+  { id: "s4", key: "feeds", label: "Category Feeds", order: 3 },
+  {
+    id: "s5",
+    key: "recently_viewed",
+    label: "Recently Viewed Products",
+    order: 4,
+  },
+];
+
 function loadFromLS<T>(key: string, defaults: T[]): T[] {
   try {
     const raw = localStorage.getItem(key);
@@ -314,6 +389,8 @@ interface HomepageManagerContextValue {
   banners: HomepageBanner[];
   categories: HomepageCategory[];
   brands: HomepageBrand[];
+  categoryFeeds: CategoryFeedConfig[];
+  homepageSections: HomepageSection[];
   uploadProgress: number;
   addBanner: (file: File, title: string, link: string) => Promise<void>;
   updateBanner: (
@@ -339,6 +416,14 @@ interface HomepageManagerContextValue {
   deleteBrand: (id: string) => void;
   reorderBrands: (newOrder: HomepageBrand[]) => void;
   uploadBrandLogo: (file: File) => Promise<string>;
+  updateFeed: (
+    id: string,
+    fields: Partial<Omit<CategoryFeedConfig, "id">>,
+  ) => void;
+  reorderFeeds: (newOrder: CategoryFeedConfig[]) => void;
+  addFeed: (categoryName: string, title: string) => void;
+  deleteFeed: (id: string) => void;
+  reorderSections: (newOrder: HomepageSection[]) => void;
 }
 
 const HomepageManagerContext =
@@ -356,6 +441,12 @@ export function HomepageManagerProvider({
   const [brands, setBrands] = useState<HomepageBrand[]>(() =>
     loadFromLS(LS_BRANDS, DEFAULT_BRANDS),
   );
+  const [categoryFeeds, setCategoryFeeds] = useState<CategoryFeedConfig[]>(() =>
+    loadFromLS(LS_FEEDS, DEFAULT_FEEDS),
+  );
+  const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(
+    () => loadFromLS(LS_SECTIONS, DEFAULT_SECTIONS),
+  );
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
@@ -367,6 +458,12 @@ export function HomepageManagerProvider({
   useEffect(() => {
     saveToLS(LS_BRANDS, brands);
   }, [brands]);
+  useEffect(() => {
+    saveToLS(LS_FEEDS, categoryFeeds);
+  }, [categoryFeeds]);
+  useEffect(() => {
+    saveToLS(LS_SECTIONS, homepageSections);
+  }, [homepageSections]);
 
   const uploadImage = useCallback(async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
@@ -390,19 +487,16 @@ export function HomepageManagerProvider({
   const addBanner = useCallback(
     async (file: File, title: string, link: string) => {
       const imageUrl = await uploadImage(file);
-      setBanners((prev) => {
-        const updated = [
-          ...prev,
-          {
-            id: `b_${Date.now()}`,
-            imageUrl,
-            title,
-            redirectLink: link,
-            order: prev.length,
-          },
-        ];
-        return updated;
-      });
+      setBanners((prev) => [
+        ...prev,
+        {
+          id: `b_${Date.now()}`,
+          imageUrl,
+          title,
+          redirectLink: link,
+          order: prev.length,
+        },
+      ]);
       toast.success("Banner added!");
     },
     [uploadImage],
@@ -500,9 +594,49 @@ export function HomepageManagerProvider({
     [uploadImage],
   );
 
+  const updateFeed = useCallback(
+    (id: string, fields: Partial<Omit<CategoryFeedConfig, "id">>) => {
+      setCategoryFeeds((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, ...fields } : f)),
+      );
+    },
+    [],
+  );
+
+  const reorderFeeds = useCallback((newOrder: CategoryFeedConfig[]) => {
+    setCategoryFeeds(newOrder.map((f, i) => ({ ...f, order: i })));
+  }, []);
+
+  const addFeed = useCallback((categoryName: string, title: string) => {
+    setCategoryFeeds((prev) => [
+      ...prev,
+      {
+        id: `f_${Date.now()}`,
+        categoryName,
+        title,
+        enabled: true,
+        order: prev.length,
+      },
+    ]);
+    toast.success("Feed added!");
+  }, []);
+
+  const deleteFeed = useCallback((id: string) => {
+    setCategoryFeeds((prev) => prev.filter((f) => f.id !== id));
+    toast.success("Feed removed");
+  }, []);
+
+  const reorderSections = useCallback((newOrder: HomepageSection[]) => {
+    setHomepageSections(newOrder.map((s, i) => ({ ...s, order: i })));
+  }, []);
+
   const sortedBanners = [...banners].sort((a, b) => a.order - b.order);
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
   const sortedBrands = [...brands].sort((a, b) => a.order - b.order);
+  const sortedFeeds = [...categoryFeeds].sort((a, b) => a.order - b.order);
+  const sortedSections = [...homepageSections].sort(
+    (a, b) => a.order - b.order,
+  );
 
   return (
     <HomepageManagerContext.Provider
@@ -510,6 +644,8 @@ export function HomepageManagerProvider({
         banners: sortedBanners,
         categories: sortedCategories,
         brands: sortedBrands,
+        categoryFeeds: sortedFeeds,
+        homepageSections: sortedSections,
         uploadProgress,
         addBanner,
         updateBanner,
@@ -524,6 +660,11 @@ export function HomepageManagerProvider({
         deleteBrand,
         reorderBrands,
         uploadBrandLogo,
+        updateFeed,
+        reorderFeeds,
+        addFeed,
+        deleteFeed,
+        reorderSections,
       }}
     >
       {children}

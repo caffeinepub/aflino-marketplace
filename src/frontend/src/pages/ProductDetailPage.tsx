@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Package,
+  Play,
   Plus,
   ShoppingCart,
   Star,
@@ -647,15 +648,33 @@ export default function ProductDetailPage({
                             minWidth: 64,
                           }}
                         >
-                          <div
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: "50%",
-                              backgroundColor: variant.colorHex,
-                              border: isWhite ? "1.5px solid #d1d5db" : "none",
-                            }}
-                          />
+                          {variant.swatchImage ? (
+                            <img
+                              src={variant.swatchImage}
+                              alt={variant.color}
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: isSelected
+                                  ? `3px solid ${AFLINO_BLUE}`
+                                  : "1.5px solid #d1d5db",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                backgroundColor: variant.colorHex,
+                                border: isWhite
+                                  ? "1.5px solid #d1d5db"
+                                  : "none",
+                              }}
+                            />
+                          )}
                           <span
                             style={{
                               fontSize: 10,
@@ -847,6 +866,81 @@ export default function ProductDetailPage({
               </div>
             </div>
           </div>
+
+          {/* ── Product Video Player ── */}
+          {product.videoUrl &&
+            (() => {
+              const videoUrl = product.videoUrl;
+              const ytMatch = videoUrl.match(
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/,
+              );
+              const youtubeId = ytMatch?.[1];
+              const isYoutube = !!youtubeId;
+              const isInstagram = videoUrl.includes("instagram.com");
+              const isFacebook = videoUrl.includes("facebook.com");
+
+              return (
+                <section className="border-t border-gray-100 py-6 mb-2">
+                  <h2
+                    className="text-lg font-bold mb-4"
+                    style={{ color: AFLINO_BLUE }}
+                  >
+                    Product Video
+                  </h2>
+                  {isYoutube ? (
+                    <div
+                      className="relative w-full"
+                      style={{ paddingBottom: "56.25%" }}
+                    >
+                      <iframe
+                        className="absolute inset-0 w-full h-full rounded-xl"
+                        src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+                        sandbox="allow-scripts allow-same-origin allow-presentation"
+                        allowFullScreen
+                        title="Product video"
+                      />
+                      <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs px-2 py-1 rounded font-bold tracking-widest pointer-events-none z-10">
+                        AFLINO
+                      </div>
+                    </div>
+                  ) : isInstagram || isFacebook ? (
+                    <div
+                      className="relative w-full rounded-xl overflow-hidden bg-gray-100 flex flex-col items-center justify-center"
+                      style={{ minHeight: 200 }}
+                    >
+                      <div className="flex flex-col items-center gap-3 p-6">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center">
+                          <Play className="text-white w-7 h-7" fill="white" />
+                        </div>
+                        <p className="text-gray-600 text-sm font-medium">
+                          {isInstagram ? "Instagram Reel" : "Facebook Video"}
+                        </p>
+                        <a
+                          href={videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <button
+                            type="button"
+                            className="text-white px-5 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: AFLINO_BLUE }}
+                            data-ocid="product.watch_video.primary_button"
+                          >
+                            Watch Video
+                          </button>
+                        </a>
+                        <p className="text-gray-400 text-xs">
+                          Opens in {isInstagram ? "Instagram" : "Facebook"}
+                        </p>
+                      </div>
+                      <div className="absolute bottom-2 right-3 text-xs text-gray-400 font-bold tracking-widest">
+                        AFLINO
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })()}
 
           {/* ── Smart Description Accordion ── */}
           {product.description && (

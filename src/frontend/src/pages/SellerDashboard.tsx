@@ -1,3 +1,12 @@
+import GatepassQR from "@/components/GatepassQR";
+import InvoiceButton from "@/components/InvoiceButton";
+import {
+  type AdvancedFormState,
+  ProductAdvancedSections,
+  SwatchImageUpload,
+  initialAdvancedState,
+} from "@/components/ProductAdvancedSections";
+import ShippingLabelButton from "@/components/ShippingLabelButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +52,7 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { logWhatsApp } from "../utils/communicationLogger";
 
 type Tab = "upload" | "wallet" | "orders";
 
@@ -57,6 +67,8 @@ interface VariantRow {
   colorHex: string;
   price: string;
   stock: string;
+  sku: string;
+  swatchImage: string;
 }
 
 function formatRupee(amount: number) {
@@ -81,6 +93,7 @@ const statusPillStyle: Record<OrderStatus, string> = {
   Shipped: "bg-indigo-100 text-indigo-700",
   "Out for Delivery": "bg-orange-100 text-orange-700",
   Delivered: "bg-emerald-100 text-emerald-700",
+  "Paid & Processing": "bg-blue-100 text-blue-700",
 };
 
 function newVariantRow(): VariantRow {
@@ -91,6 +104,8 @@ function newVariantRow(): VariantRow {
     colorHex: "#000000",
     price: "",
     stock: "",
+    sku: "",
+    swatchImage: "",
   };
 }
 
@@ -98,22 +113,28 @@ export default function SellerDashboard({
   sellerEmail = "techzone@aflino.com",
 }: Props) {
   const { logout } = useRole();
-  const { isApproved } = useSellerContext();
+  const { isApproved, getSellerByEmail, updateSellerType } = useSellerContext();
   const {
     commissionRate,
-    deliveredOrders,
+    walletEntries,
     payoutRequests,
     payoutHistory,
     minPayoutAmount,
-    getSellerEarnings,
+    getSellerAvailableBalance,
     getSellerPendingBalance,
     requestPayout,
+    getCategoryRate,
   } = useWallet();
   const { orders, updateOrderStatus } = useOrderTracking();
   const { addProduct } = useProducts();
 
   const approved = isApproved(sellerEmail);
+  const sellerProfile = getSellerByEmail(sellerEmail);
+  const isLocalSeller = sellerProfile?.sellerType === "enrollmentId";
   const [activeTab, setActiveTab] = useState<Tab>("upload");
+  const [gatepassOrderId, setGatepassOrderId] = useState<string | null>(null);
+  const [upgradeGstin, setUpgradeGstin] = useState("");
+  const [upgradePan, setUpgradePan] = useState("");
 
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("");
@@ -124,10 +145,13 @@ export default function SellerDashboard({
   const [variantRows, setVariantRows] = useState<VariantRow[]>([
     newVariantRow(),
   ]);
+  const [advancedState, setAdvancedState] = useState<AdvancedFormState>(
+    initialAdvancedState(),
+  );
 
-  const totalEarnings = getSellerEarnings(sellerEmail);
+  const availableBalance = getSellerAvailableBalance(sellerEmail);
   const pendingBalance = getSellerPendingBalance(sellerEmail);
-  const sellerOrders = deliveredOrders.filter(
+  const sellerOrders = walletEntries.filter(
     (o) => o.sellerEmail === sellerEmail,
   );
   const sellerHistory = payoutHistory.filter(
@@ -136,6 +160,8 @@ export default function SellerDashboard({
   const hasPendingRequest = payoutRequests.some(
     (r) => r.sellerEmail === sellerEmail && r.status === "pending",
   );
+  const totalEarned = sellerOrders.reduce((s, e) => s + e.netEarning, 0);
+  const totalPaidOut = sellerHistory.reduce((s, h) => s + h.paidAmount, 0);
 
   function addVariantRow() {
     setVariantRows((prev) => [...prev, newVariantRow()]);
@@ -201,6 +227,17 @@ export default function SellerDashboard({
       rating: 4.0,
       seller: "Seller Store",
       images: [],
+      videoUrl: advancedState.videoUrl || undefined,
+      weight: Number.parseFloat(advancedState.weight) || undefined,
+      weightUnit: advancedState.weightUnit,
+      brandName: advancedState.brandName || undefined,
+      countryOfOrigin: advancedState.countryOfOrigin || undefined,
+      gstRate: advancedState.gstRate
+        ? (Number.parseInt(advancedState.gstRate) as 5 | 12 | 18 | 28)
+        : undefined,
+      hsnCode: advancedState.hsnCode || undefined,
+      manufacturerDetails: advancedState.manufacturerDetails || undefined,
+      whatInTheBox: advancedState.whatInTheBox,
       variants: variantsEnabled
         ? variantRows.map((r) => ({
             id: r.id,
@@ -212,6 +249,8 @@ export default function SellerDashboard({
             colorHex: r.colorHex,
             price: Number.parseFloat(r.price) || 0,
             stock: Number.parseInt(r.stock) || 0,
+            sku: r.sku || undefined,
+            swatchImage: r.swatchImage || undefined,
           }))
         : [],
     });
@@ -222,6 +261,7 @@ export default function SellerDashboard({
     setDescription("");
     setVariantsEnabled(false);
     setVariantRows([newVariantRow()]);
+    setAdvancedState(initialAdvancedState());
   };
 
   const handlePayoutRequest = () => {
@@ -229,7 +269,7 @@ export default function SellerDashboard({
       toast.error("A payout request is already pending review.");
       return;
     }
-    if (pendingBalance < minPayoutAmount) {
+    if (availableBalance < minPayoutAmount) {
       toast.error(`Minimum payout amount is ${formatRupee(minPayoutAmount)}`);
       return;
     }
@@ -537,7 +577,7 @@ export default function SellerDashboard({
                               className="grid gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100"
                               style={{
                                 gridTemplateColumns:
-                                  "80px 1fr 32px 90px 80px 32px",
+                                  "80px 1fr 32px 36px 70px 90px 80px 32px",
                               }}
                               data-ocid={`seller.variants.item.${i + 1}`}
                             >
@@ -582,6 +622,31 @@ export default function SellerDashboard({
                                 }
                                 className="w-8 h-8 rounded cursor-pointer border border-gray-200 p-0.5"
                                 title="Pick color"
+                              />
+                              {/* SKU */}
+                              <Input
+                                placeholder="SKU"
+                                value={row.sku}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "sku",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs"
+                                data-ocid="seller.variant_sku.input"
+                              />
+                              {/* Swatch Image */}
+                              <SwatchImageUpload
+                                swatchImage={row.swatchImage || undefined}
+                                onUpload={(base64) =>
+                                  updateVariantRow(
+                                    row.id,
+                                    "swatchImage",
+                                    base64,
+                                  )
+                                }
                               />
                               {/* Price */}
                               <Input
@@ -631,12 +696,14 @@ export default function SellerDashboard({
                               className="grid gap-2 px-3 -mt-1"
                               style={{
                                 gridTemplateColumns:
-                                  "80px 1fr 32px 90px 80px 32px",
+                                  "80px 1fr 32px 36px 70px 90px 80px 32px",
                               }}
                             >
                               <p className="text-xs text-gray-400">Size</p>
                               <p className="text-xs text-gray-400">Color</p>
                               <p className="text-xs text-gray-400">Hex</p>
+                              <p className="text-xs text-gray-400">Swatch</p>
+                              <p className="text-xs text-gray-400">SKU</p>
                               <p className="text-xs text-gray-400">Price (₹)</p>
                               <p className="text-xs text-gray-400">Stock</p>
                               <span />
@@ -659,6 +726,27 @@ export default function SellerDashboard({
                       )}
                     </div>
 
+                    {/* Advanced Sections A-E */}
+                    {approved && (
+                      <ProductAdvancedSections
+                        state={advancedState}
+                        onChange={(patch) =>
+                          setAdvancedState((prev) => ({ ...prev, ...patch }))
+                        }
+                        sellingPrice={Number.parseFloat(price) || 0}
+                        commissionRate={getCategoryRate(category)}
+                        variantMinPrice={
+                          variantsEnabled && variantRows.length > 0
+                            ? Math.min(
+                                ...variantRows
+                                  .map((r) => Number.parseFloat(r.price) || 0)
+                                  .filter(Boolean),
+                              )
+                            : undefined
+                        }
+                      />
+                    )}
+
                     <Button
                       type="button"
                       onClick={handleUpload}
@@ -677,6 +765,67 @@ export default function SellerDashboard({
               </>
             )}
 
+            {/* Upgrade to GSTIN banner - shown for local sellers in any tab */}
+            {isLocalSeller && sellerProfile && (
+              <div
+                className="mb-4 rounded-xl border-2 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+                style={{ borderColor: "#006AFF", backgroundColor: "#EEF4FF" }}
+                data-ocid="seller.upgrade_gstin.panel"
+              >
+                <div className="flex-1">
+                  <p className="text-sm font-bold" style={{ color: "#006AFF" }}>
+                    🌐 Upgrade to GSTIN for Pan-India Selling
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Currently selling only in {sellerProfile.state}. Add your
+                    GSTIN to reach customers across India.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                    <input
+                      type="text"
+                      placeholder="GSTIN (e.g. 22AAAAA0000A1Z5)"
+                      value={upgradeGstin}
+                      onChange={(e) =>
+                        setUpgradeGstin(e.target.value.toUpperCase())
+                      }
+                      className="flex-1 border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-400"
+                      data-ocid="seller.upgrade_gstin.input"
+                    />
+                    <input
+                      type="text"
+                      placeholder="PAN (e.g. AAAAA0000A)"
+                      value={upgradePan}
+                      onChange={(e) =>
+                        setUpgradePan(e.target.value.toUpperCase())
+                      }
+                      className="flex-1 border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-400"
+                      data-ocid="seller.upgrade_pan.input"
+                    />
+                    <button
+                      type="button"
+                      className="px-4 py-1.5 rounded-lg text-xs font-bold text-white"
+                      style={{ backgroundColor: "#006AFF" }}
+                      onClick={() => {
+                        if (!upgradeGstin.trim() || !upgradePan.trim()) {
+                          toast.error("Please enter both GSTIN and PAN");
+                          return;
+                        }
+                        updateSellerType(sellerProfile.id, "gstin");
+                        toast.success(
+                          "Successfully upgraded to GSTIN! Your products are now visible Pan-India.",
+                        );
+                        setUpgradeGstin("");
+                        setUpgradePan("");
+                      }}
+                      data-ocid="seller.upgrade_gstin.submit_button"
+                    >
+                      Upgrade
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === "wallet" && (
               <div className="max-w-4xl">
                 <div className="flex items-center justify-between mb-1">
@@ -692,9 +841,10 @@ export default function SellerDashboard({
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
+                  {/* Card 1 - Total Earned */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
                     <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center"
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: "#EBF3FF" }}
                     >
                       <TrendingUp
@@ -702,29 +852,56 @@ export default function SellerDashboard({
                         style={{ color: "#006AFF" }}
                       />
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                        Total Earnings
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide leading-tight">
+                        Total Earned
                       </p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatRupee(totalEarnings)}
+                      <p className="text-lg font-bold text-gray-900 truncate">
+                        {formatRupee(totalEarned)}
                       </p>
                     </div>
                   </div>
-
-                  <div className="bg-white rounded-xl border border-purple-100 shadow-sm p-5 flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-purple-100">
-                      <Wallet className="w-5 h-5 text-purple-700" />
+                  {/* Card 2 - Pending Balance */}
+                  <div className="bg-white rounded-xl border border-amber-100 shadow-sm p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-amber-100">
+                      <Clock className="w-5 h-5 text-amber-600" />
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                        Pending Balance
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide leading-tight">
+                        Pending
                       </p>
-                      <p
-                        className="text-2xl font-bold"
-                        style={{ color: "#7C3AED" }}
-                      >
+                      <p className="text-lg font-bold text-amber-600 truncate">
                         {formatRupee(pendingBalance)}
+                      </p>
+                      <p className="text-xs text-gray-400">15-day hold</p>
+                    </div>
+                  </div>
+                  {/* Card 3 - Available Balance */}
+                  <div className="bg-white rounded-xl border border-green-100 shadow-sm p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-green-100">
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide leading-tight">
+                        Available
+                      </p>
+                      <p className="text-lg font-bold text-green-600 truncate">
+                        {formatRupee(availableBalance)}
+                      </p>
+                      <p className="text-xs text-gray-400">Ready to withdraw</p>
+                    </div>
+                  </div>
+                  {/* Card 4 - Total Paid Out */}
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100">
+                      <Wallet className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide leading-tight">
+                        Total Paid Out
+                      </p>
+                      <p className="text-lg font-bold text-gray-700 truncate">
+                        {formatRupee(totalPaidOut)}
                       </p>
                     </div>
                   </div>
@@ -762,7 +939,7 @@ export default function SellerDashboard({
                       type="button"
                       onClick={handlePayoutRequest}
                       disabled={
-                        hasPendingRequest || pendingBalance < minPayoutAmount
+                        hasPendingRequest || availableBalance < minPayoutAmount
                       }
                       className="gap-2 text-white font-semibold disabled:opacity-50"
                       style={{ backgroundColor: "#7C3AED" }}
@@ -784,53 +961,70 @@ export default function SellerDashboard({
                         Payout History
                       </h3>
                     </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="font-semibold text-gray-700">
-                            Date
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Amount Paid
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Status
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sellerHistory.map((h, i) => (
-                          <TableRow
-                            key={h.id}
-                            data-ocid={`seller.payout.item.${i + 1}`}
-                          >
-                            <TableCell className="text-gray-600 text-sm">
-                              {new Date(h.paidAt).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </TableCell>
-                            <TableCell className="font-semibold text-gray-800">
-                              {formatRupee(h.paidAmount)}
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                                Approved
-                              </span>
-                            </TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-semibold text-gray-700">
+                              Transaction ID
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700">
+                              Amount
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700">
+                              Date
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700">
+                              Payment Method
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {sellerHistory.map((h, i) => (
+                            <TableRow
+                              key={h.id}
+                              data-ocid={`seller.payout.item.${i + 1}`}
+                            >
+                              <TableCell className="text-xs text-gray-500 font-mono">
+                                {h.transactionId}
+                              </TableCell>
+                              <TableCell className="font-semibold text-green-600">
+                                {formatRupee(h.paidAmount)}
+                              </TableCell>
+                              <TableCell className="text-gray-600 text-sm">
+                                {new Date(h.paidAt).toLocaleDateString(
+                                  "en-IN",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100"
+                                  style={{ color: "#006AFF" }}
+                                >
+                                  {h.paymentMethod}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 )}
 
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
+                  <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-base font-semibold text-gray-800">
-                      Earnings Breakdown
+                      Financial Ledger
                     </h3>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                      All Transactions
+                    </span>
                   </div>
                   {sellerOrders.length === 0 ? (
                     <div
@@ -842,64 +1036,158 @@ export default function SellerDashboard({
                       </p>
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="font-semibold text-gray-700">
-                            Product
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Order Value
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Commission ({commissionRate}%)
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Net Earned
-                          </TableHead>
-                          <TableHead className="font-semibold text-gray-700">
-                            Date
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sellerOrders.map((order, i) => {
-                          const commission =
-                            order.orderAmount * (commissionRate / 100);
-                          const net = order.orderAmount - commission;
-                          return (
-                            <TableRow
-                              key={order.id}
-                              className="bg-gray-50/50"
-                              data-ocid={`seller.earnings.item.${i + 1}`}
-                            >
-                              <TableCell className="font-medium text-gray-800">
-                                {order.productName}
-                              </TableCell>
-                              <TableCell className="text-gray-600">
-                                {formatRupee(order.orderAmount)}
-                              </TableCell>
-                              <TableCell className="text-red-500">
-                                -{formatRupee(commission)}
-                              </TableCell>
-                              <TableCell className="font-semibold text-emerald-600">
-                                {formatRupee(net)}
-                              </TableCell>
-                              <TableCell className="text-gray-400 text-sm">
-                                {new Date(order.deliveredAt).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Date
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Order ID
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Product
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Sale Price
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Commission
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Shipping
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Net Earning
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Status
+                            </TableHead>
+                            <TableHead className="font-semibold text-gray-700 whitespace-nowrap">
+                              Clearance
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(() => {
+                            // Status logic: sort oldest first, mark as Paid until totalPaidOut exhausted
+                            const sorted = [...sellerOrders].sort(
+                              (a, b) =>
+                                new Date(a.deliveredAt).getTime() -
+                                new Date(b.deliveredAt).getTime(),
+                            );
+                            let paidRemaining = totalPaidOut;
+                            const statusMap: Record<
+                              string,
+                              "Paid" | "Available" | "Pending"
+                            > = {};
+                            for (const e of sorted) {
+                              const now = Date.now();
+                              const pastHolding =
+                                now - new Date(e.deliveredAt).getTime() >=
+                                15 * 24 * 60 * 60 * 1000;
+                              if (paidRemaining >= e.netEarning) {
+                                statusMap[e.id] = "Paid";
+                                paidRemaining -= e.netEarning;
+                              } else if (pastHolding) {
+                                statusMap[e.id] = "Available";
+                              } else {
+                                statusMap[e.id] = "Pending";
+                              }
+                            }
+                            return sellerOrders.map((order, i) => {
+                              const shipping = order.shippingFee ?? 50;
+                              const clearanceDate = new Date(
+                                new Date(order.deliveredAt).getTime() +
+                                  15 * 24 * 60 * 60 * 1000,
+                              );
+                              const status = statusMap[order.id] ?? "Pending";
+                              return (
+                                <TableRow
+                                  key={order.id}
+                                  data-ocid={`seller.earnings.item.${i + 1}`}
+                                >
+                                  <TableCell className="text-gray-600 text-sm whitespace-nowrap">
+                                    {new Date(
+                                      order.deliveredAt,
+                                    ).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-gray-500 font-mono whitespace-nowrap">
+                                    <span title={order.orderId}>
+                                      {order.orderId.slice(0, 8)}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="font-medium text-gray-800 max-w-[140px] truncate">
+                                    {order.productName}
+                                  </TableCell>
+                                  <TableCell className="text-gray-800 whitespace-nowrap">
+                                    {formatRupee(order.orderAmount)}
+                                  </TableCell>
+                                  <TableCell className="whitespace-nowrap font-medium">
+                                    {(order.commissionRateApplied ?? 10) ===
+                                    0 ? (
+                                      <span className="text-green-600">
+                                        ₹0 (0%)
+                                      </span>
+                                    ) : (
+                                      <span className="text-red-500">
+                                        -{formatRupee(order.commission)} (
+                                        {order.commissionRateApplied ??
+                                          commissionRate}
+                                        %)
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-red-400 whitespace-nowrap">
+                                    -{formatRupee(shipping)}
+                                  </TableCell>
+                                  <TableCell className="font-bold text-green-600 whitespace-nowrap">
+                                    {formatRupee(order.netEarning)}
+                                  </TableCell>
+                                  <TableCell className="whitespace-nowrap">
+                                    {status === "Pending" && (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                        Pending
+                                      </span>
+                                    )}
+                                    {status === "Available" && (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                        Available
+                                      </span>
+                                    )}
+                                    {status === "Paid" && (
+                                      <span
+                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                                        style={{ backgroundColor: "#006AFF" }}
+                                      >
+                                        Paid
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-gray-500 text-sm whitespace-nowrap">
+                                    {status === "Pending"
+                                      ? clearanceDate.toLocaleDateString(
+                                          "en-IN",
+                                          {
+                                            day: "numeric",
+                                            month: "short",
+                                            year: "numeric",
+                                          },
+                                        )
+                                      : "—"}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            });
+                          })()}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -941,6 +1229,12 @@ export default function SellerDashboard({
                           <TableHead className="font-semibold text-gray-700">
                             Update Status
                           </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Invoice
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -977,6 +1271,13 @@ export default function SellerDashboard({
                                     order.id,
                                     val as OrderStatus,
                                   );
+                                  if (val === "Out for Delivery") {
+                                    logWhatsApp(
+                                      "out_for_delivery",
+                                      "",
+                                      order.id,
+                                    );
+                                  }
                                   toast.success(
                                     `Order ${order.id} updated to "${val}"`,
                                   );
@@ -997,6 +1298,52 @@ export default function SellerDashboard({
                                 </SelectContent>
                               </Select>
                             </TableCell>
+                            <TableCell>
+                              <InvoiceButton order={order} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {(order.status === "Packed" ||
+                                  order.status === "Order Placed" ||
+                                  order.status === "Paid & Processing") && (
+                                  <>
+                                    <ShippingLabelButton
+                                      order={{
+                                        orderId: order.id,
+                                        customerName:
+                                          order.buyerName ?? "Customer",
+                                        customerCity: "Delhi",
+                                        customerState:
+                                          order.buyerState ?? "Delhi",
+                                        customerPincode:
+                                          order.buyerPincode ?? "110001",
+                                        sellerName: order.sellerName,
+                                        sellerCity: "Mumbai",
+                                        paymentType: "PREPAID",
+                                        items: [
+                                          {
+                                            name: order.product,
+                                            qty: order.quantity ?? 1,
+                                            weight: 0.5,
+                                          },
+                                        ],
+                                        totalAmount: order.amountRaw,
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setGatepassOrderId(order.id)
+                                      }
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-50 transition-colors"
+                                      data-ocid={`seller.orders.gatepass.${i + 1}`}
+                                    >
+                                      Gatepass
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1007,6 +1354,20 @@ export default function SellerDashboard({
             )}
           </motion.div>
         </main>
+        {gatepassOrderId && (
+          <GatepassQR
+            orderId={gatepassOrderId}
+            isOpen={!!gatepassOrderId}
+            onClose={() => setGatepassOrderId(null)}
+            order={
+              orders.find((o) => o.id === gatepassOrderId) ?? {
+                id: gatepassOrderId,
+                product: "",
+                amount: "",
+              }
+            }
+          />
+        )}
       </div>
     </div>
   );

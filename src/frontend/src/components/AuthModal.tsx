@@ -8,6 +8,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
+import { logEmail } from "@/utils/communicationLogger";
 import { Loader2, Lock, Mail, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +36,14 @@ export default function AuthModal({
     e.preventDefault();
     try {
       await login();
+      if (view === "register") {
+        logEmail(
+          "welcome",
+          email || "new.user@aflino.com",
+          "Welcome to AFLINO Local - Your account is ready!",
+          "",
+        );
+      }
       toast.success(
         view === "login" ? "Logged in successfully!" : "Account created!",
       );
