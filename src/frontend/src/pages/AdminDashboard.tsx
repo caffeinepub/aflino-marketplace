@@ -4,9 +4,11 @@ import {
   SwatchImageUpload,
   initialAdvancedState,
 } from "@/components/ProductAdvancedSections";
+import AdminCommandCenter from "@/components/admin/AdminCommandCenter";
 import BrandSettingsTab from "@/components/admin/BrandSettingsTab";
 import CommunicationSettings from "@/components/admin/CommunicationSettings";
 import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
+import GlobalPriceAdjuster from "@/components/admin/GlobalPriceAdjuster";
 import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
 import PaymentSettingsTab from "@/components/admin/PaymentSettingsTab";
 import QRSecuritySection from "@/components/admin/QRSecuritySection";
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useBlacklist } from "@/context/BlacklistContext";
+import { useOrderTracking } from "@/context/OrderTrackingContext";
 import { useProducts } from "@/context/ProductContext";
 import { useReviews } from "@/context/ReviewContext";
 import { useRewardSettings } from "@/context/RewardSettingsContext";
@@ -45,6 +48,7 @@ import { useRole } from "@/context/RoleContext";
 import { useSellerContext } from "@/context/SellerContext";
 import { useWallet } from "@/context/WalletContext";
 import {
+  BarChart2,
   Building2,
   CheckCircle2,
   Coins,
@@ -60,6 +64,7 @@ import {
   Shield,
   Star,
   Trash2,
+  TrendingUp,
   Upload,
   Users,
   Wallet,
@@ -79,7 +84,8 @@ type Tab =
   | "payment"
   | "communication"
   | "brand"
-  | "reviews";
+  | "reviews"
+  | "analytics";
 
 interface AdminVariantRow {
   id: string;
@@ -107,7 +113,9 @@ function newAdminVariantRow(): AdminVariantRow {
 
 export default function AdminDashboard() {
   const { logout } = useRole();
-  const { products, addProduct, deleteProduct } = useProducts();
+  const { orders } = useOrderTracking();
+  const { products, addProduct, deleteProduct, updateProductsBulk } =
+    useProducts();
   const {
     pendingSellers,
     approveSeller,
@@ -487,6 +495,19 @@ export default function AdminDashboard() {
                 {pendingReviewsCount}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("analytics")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "analytics"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.analytics.tab"
+          >
+            <BarChart2 className="w-4 h-4" />
+            Command Center
           </button>
           <button
             type="button"
@@ -942,6 +963,11 @@ export default function AdminDashboard() {
                 <p className="text-gray-500 text-sm mb-6">
                   Upload new products or manage marketplace listings
                 </p>
+
+                <GlobalPriceAdjuster
+                  products={products}
+                  updateProductsBulk={updateProductsBulk}
+                />
 
                 {/* Admin Product Upload Form */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6 mb-6">
@@ -2190,6 +2216,17 @@ export default function AdminDashboard() {
               transition={{ duration: 0.3 }}
             >
               <BrandSettingsTab />
+            </motion.div>
+          )}
+
+          {activeTab === "analytics" && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <AdminCommandCenter orders={orders} />
             </motion.div>
           )}
         </main>
