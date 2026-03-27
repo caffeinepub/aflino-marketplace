@@ -4,15 +4,24 @@ import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useTranslation } from "@/context/I18nContext";
 import { PRODUCTS } from "@/data/products";
 import {
+  Baby,
+  Book,
   Camera,
   ChevronDown,
+  Cpu,
   Heart,
+  Home,
   MapPin,
   Menu,
   Mic,
   Navigation,
   Search,
+  Shirt,
+  ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
+  User,
+  Watch,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -26,6 +35,18 @@ interface HeaderProps {
 const navLinks = [
   { labelKey: "nav.home", href: "#home" },
   { labelKey: "nav.allProducts", href: "#products" },
+];
+
+const CATEGORIES = [
+  { label: "Fashion", icon: Shirt, color: "#EC008C" },
+  { label: "Electronics", icon: Cpu, color: "#006AFF" },
+  { label: "Home & Living", icon: Home, color: "#6366f1" },
+  { label: "Beauty", icon: Sparkles, color: "#f43f5e" },
+  { label: "Bags", icon: ShoppingBag, color: "#f59e0b" },
+  { label: "Watches", icon: Watch, color: "#10b981" },
+  { label: "Books", icon: Book, color: "#8b5cf6" },
+  { label: "Kids", icon: Baby, color: "#ec4899" },
+  { label: "Sports", icon: User, color: "#0ea5e9" },
 ];
 
 function SearchBox({
@@ -130,7 +151,7 @@ function SearchBox({
                   className="text-sm font-bold flex-shrink-0 ml-3"
                   style={{ color: "#006AFF" }}
                 >
-                  \u20b9{product.price.toLocaleString("en-IN")}
+                  ₹{product.price.toLocaleString("en-IN")}
                 </span>
               </button>
             ))}
@@ -207,7 +228,7 @@ function LocationPill() {
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors text-left text-gray-600"
                 data-ocid="header.location.all_india.button"
               >
-                \ud83c\uddee\ud83c\uddf3 {t("nav.allIndia")} (GST products)
+                🇮🇳 {t("nav.allIndia")} (GST products)
               </button>
               <div className="h-px bg-gray-100 my-1" />
               <div className="max-h-48 overflow-y-auto">
@@ -245,6 +266,46 @@ function LocationPill() {
   );
 }
 
+function CategoryCarousel() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  return (
+    <div
+      className="border-t border-b"
+      style={{ borderColor: "#0056b3", borderWidth: "1px" }}
+    >
+      <div className="max-w-[1200px] mx-auto px-4">
+        <div
+          ref={scrollRef}
+          className="flex items-center gap-1 overflow-x-auto py-1.5 scrollbar-hide"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.label}
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 hover:bg-gray-50 transition-colors"
+                style={{ color: "#444" }}
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("aflino:filterCategory", {
+                      detail: cat.label,
+                    }),
+                  )
+                }
+              >
+                <Icon className="w-3 h-3" style={{ color: cat.color }} />
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   const { t } = useTranslation();
   const [activeLink, setActiveLink] = useState("nav.home");
@@ -254,6 +315,15 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   const { customerState, setCustomerState, requestLocation, indianStates } =
     useGeoLocation();
   const [mobilePicker, setMobilePicker] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 100);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function openFilters() {
     setMobileOpen(false);
@@ -262,123 +332,139 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      {/* Row 1: Logo + nav + location + icons + auth */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-3 h-[52px]">
-          {/* Logo */}
-          <a
-            href="#home"
-            className="flex-shrink-0 flex items-center"
-            data-ocid="nav.link"
+      {/* Row 1: Logo + nav + location + icons — hidden when scrolled */}
+      <AnimatePresence initial={false}>
+        {!scrolled && (
+          <motion.div
+            key="top-row"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
           >
-            <span className="text-2xl font-bold tracking-tight">
-              <span style={{ color: "#006AFF" }}>AFL</span>
-              <span style={{ color: "#FF1B8D" }}>INO</span>
-            </span>
-          </a>
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
+              <div className="flex items-center gap-3 h-[52px]">
+                {/* Logo */}
+                <a
+                  href="#home"
+                  className="flex-shrink-0 flex items-center"
+                  data-ocid="nav.link"
+                >
+                  <span className="text-2xl font-bold tracking-tight">
+                    <span style={{ color: "#006AFF" }}>AFL</span>
+                    <span style={{ color: "#FF1B8D" }}>INO</span>
+                  </span>
+                </a>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1 ml-2">
-            {navLinks.map((link) => (
-              <a
-                key={link.labelKey}
-                href={link.href}
-                data-ocid="nav.link"
-                onClick={() => setActiveLink(link.labelKey)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors relative ${
-                  activeLink === link.labelKey
-                    ? "text-primary"
-                    : "text-gray-700 hover:text-primary hover:bg-blue-50"
-                }`}
-              >
-                {t(link.labelKey)}
-                {activeLink === link.labelKey && (
-                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full" />
-                )}
-              </a>
-            ))}
-          </nav>
+                {/* Desktop Nav */}
+                <nav className="hidden md:flex items-center gap-1 ml-2">
+                  {navLinks.map((link) => (
+                    <a
+                      key={link.labelKey}
+                      href={link.href}
+                      data-ocid="nav.link"
+                      onClick={() => setActiveLink(link.labelKey)}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors relative ${
+                        activeLink === link.labelKey
+                          ? "text-primary"
+                          : "text-gray-700 hover:text-primary hover:bg-blue-50"
+                      }`}
+                    >
+                      {t(link.labelKey)}
+                      {activeLink === link.labelKey && (
+                        <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full" />
+                      )}
+                    </a>
+                  ))}
+                </nav>
 
-          <div className="flex-1" />
+                <div className="flex-1" />
 
-          {/* Location pill - desktop */}
-          <div className="hidden md:block">
-            <LocationPill />
-          </div>
+                {/* Location pill - desktop */}
+                <div className="hidden md:block">
+                  <LocationPill />
+                </div>
 
-          {/* Wishlist icon - desktop (left of language switcher, Snapdeal style) */}
-          <div className="hidden md:flex items-center">
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
-              aria-label="Wishlist"
-            >
-              <Heart className="w-5 h-5" />
-            </button>
-          </div>
+                {/* Wishlist icon - desktop */}
+                <div className="hidden md:flex items-center">
+                  <button
+                    type="button"
+                    className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
+                    aria-label="Wishlist"
+                  >
+                    <Heart className="w-5 h-5" />
+                  </button>
+                </div>
 
-          {/* Language Switcher - desktop (between Wishlist and Auth, Snapdeal style) */}
-          <div className="hidden md:block">
-            <LanguageSwitcher />
-          </div>
+                {/* Language Switcher — between Wishlist and Auth (Snapdeal style) */}
+                <div className="hidden md:block">
+                  <LanguageSwitcher />
+                </div>
 
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-            <Button
-              type="button"
-              onClick={onLoginClick}
-              className="rounded-full px-5 h-8 text-sm font-semibold text-white"
-              style={{ backgroundColor: "#006AFF" }}
-              data-ocid="header.login.button"
-            >
-              {t("nav.login")}
-            </Button>
-            <Button
-              type="button"
-              onClick={onRegisterClick}
-              className="rounded-full px-5 h-8 text-sm font-semibold text-white border-0"
-              style={{ backgroundColor: "#FF1B8D" }}
-              data-ocid="header.register.button"
-            >
-              {t("nav.register")}
-            </Button>
-          </div>
+                {/* Auth Buttons */}
+                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    type="button"
+                    onClick={onLoginClick}
+                    className="rounded-full px-5 h-8 text-sm font-semibold text-white"
+                    style={{ backgroundColor: "#006AFF" }}
+                    data-ocid="header.login.button"
+                  >
+                    {t("nav.login")}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={onRegisterClick}
+                    className="rounded-full px-5 h-8 text-sm font-semibold text-white border-0"
+                    style={{ backgroundColor: "#FF1B8D" }}
+                    data-ocid="header.register.button"
+                  >
+                    {t("nav.register")}
+                  </Button>
+                </div>
 
-          {/* Mobile: icons + hamburger */}
-          <div className="flex md:hidden items-center gap-1">
-            <button
-              type="button"
-              className="p-1.5 text-gray-500"
-              aria-label="Wishlist"
-            >
-              <Heart className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              className="p-1.5 text-gray-700"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
-              data-ocid="header.menu.toggle"
-            >
-              {mobileOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
+                {/* Mobile: icons + hamburger */}
+                <div className="flex md:hidden items-center gap-1">
+                  <button
+                    type="button"
+                    className="p-1.5 text-gray-500"
+                    aria-label="Wishlist"
+                  >
+                    <Heart className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 text-gray-700"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Toggle menu"
+                    data-ocid="header.menu.toggle"
+                  >
+                    {mobileOpen ? (
+                      <X className="w-6 h-6" />
+                    ) : (
+                      <Menu className="w-6 h-6" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Row 2: Search bar (all screen sizes) */}
-        <div className="pb-2">
-          <SearchBox
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder={t("nav.search")}
-            ocid="header.search_input"
-          />
-        </div>
+      {/* Row 2: Search bar — always sticky */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-2">
+        <SearchBox
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("nav.search")}
+          ocid="header.search_input"
+        />
       </div>
+
+      {/* Row 3: Category Carousel — always visible */}
+      <CategoryCarousel />
 
       {/* Mobile Drawer */}
       <AnimatePresence>
@@ -442,7 +528,7 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                         }}
                         className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium rounded hover:bg-gray-100 text-left text-gray-600"
                       >
-                        \ud83c\uddee\ud83c\uddf3 {t("nav.allIndia")}
+                        🇮🇳 {t("nav.allIndia")}
                       </button>
                       <div className="h-px bg-gray-200 my-0.5" />
                       {indianStates.map((state) => (

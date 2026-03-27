@@ -3,9 +3,17 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from "react";
-import { type LangCode, getSavedLang, saveLang, translate } from "../i18n";
+import {
+  type LangCode,
+  SUPPORTED_LANGS,
+  applyHtmlDir,
+  getSavedLang,
+  saveLang,
+  translate,
+} from "../i18n";
 
 interface I18nContextValue {
   language: LangCode;
@@ -22,8 +30,15 @@ const I18nContext = createContext<I18nContextValue>({
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<LangCode>(getSavedLang);
 
+  // Apply dir to <html> on mount and on language change
+  useEffect(() => {
+    applyHtmlDir(language);
+  }, [language]);
+
   const changeLanguage = useCallback((code: string) => {
-    const safe = (["en", "hi", "bn"].includes(code) ? code : "en") as LangCode;
+    const safe = (
+      SUPPORTED_LANGS.includes(code as LangCode) ? code : "en"
+    ) as LangCode;
     saveLang(safe);
     setLanguage(safe);
   }, []);

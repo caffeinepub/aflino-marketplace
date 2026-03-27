@@ -54,6 +54,7 @@ import {
   CheckCircle2,
   Coins,
   CreditCard,
+  Globe,
   Image,
   LayoutDashboard,
   LogOut,
@@ -86,7 +87,8 @@ type Tab =
   | "communication"
   | "brand"
   | "reviews"
-  | "analytics";
+  | "analytics"
+  | "languages";
 
 interface AdminVariantRow {
   id: string;
@@ -510,6 +512,20 @@ export default function AdminDashboard() {
             <BarChart2 className="w-4 h-4" />
             Command Center
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("languages")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "languages"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.languages.tab"
+          >
+            <Globe className="w-4 h-4" />
+            Languages
+          </button>
+
           <button
             type="button"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 text-sm hover:bg-gray-50 transition-colors"
@@ -2225,6 +2241,26 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {activeTab === "languages" && (
+            <motion.div
+              key="languages"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Language & Asset Manager
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Upload and crop landmark icons for all 28 languages. Manage
+                  brand assets (Logo, Banners, Icons).
+                </p>
+              </div>
+              <LanguageIconManager />
+            </motion.div>
+          )}
           {activeTab === "analytics" && (
             <motion.div
               key="analytics"

@@ -1,9 +1,37 @@
-import { LANGUAGES } from "@/components/LanguageSwitcher";
 import { useLanguageIcons } from "@/context/LanguageIconContext";
+import { ALL_LANGUAGES } from "@/i18n";
 import { Check, RotateCcw, Upload, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/* ── Simple canvas-based image cropper ── */
+/** Keep backward-compat export */
+export const LANGUAGES = ALL_LANGUAGES;
+
+const ASSET_LABELS: {
+  key: string;
+  label: string;
+  size: string;
+  desc: string;
+}[] = [
+  {
+    key: "logo",
+    label: "Brand Logo",
+    size: "200x60",
+    desc: "Horizontal logo for header",
+  },
+  {
+    key: "banner",
+    label: "Homepage Banner",
+    size: "1920x600",
+    desc: "Full-width hero banner",
+  },
+  {
+    key: "icon",
+    label: "Language Icon",
+    size: "150x150",
+    desc: "Square/round icon for language modal",
+  },
+];
+
 interface CropState {
   x: number;
   y: number;
@@ -28,47 +56,37 @@ function ImageCropper({
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const DISPLAY = 220;
 
-  const DISPLAY = 220; // display canvas size px
-
-  // Load image
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
-      // Center image initially
       const scaleToFit = Math.max(DISPLAY / img.width, DISPLAY / img.height);
       setCrop({ x: 0, y: 0, scale: scaleToFit });
     };
     img.src = src;
   }, [src]);
 
-  // Draw on canvas
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const img = imgRef.current;
     if (!canvas || !img) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     ctx.clearRect(0, 0, DISPLAY, DISPLAY);
-
-    // Clip shape
     ctx.save();
     if (shape === "round") {
       ctx.beginPath();
       ctx.arc(DISPLAY / 2, DISPLAY / 2, DISPLAY / 2, 0, Math.PI * 2);
       ctx.clip();
     }
-
     const w = img.width * crop.scale;
     const h = img.height * crop.scale;
     const drawX = (DISPLAY - w) / 2 + crop.x;
     const drawY = (DISPLAY - h) / 2 + crop.y;
     ctx.drawImage(img, drawX, drawY, w, h);
     ctx.restore();
-
-    // Overlay bounding box guide
     ctx.save();
     ctx.strokeStyle = "#006AFF";
     ctx.lineWidth = 2;
@@ -87,7 +105,6 @@ function ImageCropper({
     draw();
   }, [draw]);
 
-  // Mouse drag handlers
   function onMouseDown(e: React.MouseEvent) {
     setDragging(true);
     setDragStart({ x: e.clientX - crop.x, y: e.clientY - crop.y });
@@ -104,23 +121,7 @@ function ImageCropper({
     setDragging(false);
   }
 
-  function zoomIn() {
-    setCrop((c) => ({ ...c, scale: Math.min(c.scale * 1.15, 5) }));
-  }
-  function zoomOut() {
-    setCrop((c) => ({ ...c, scale: Math.max(c.scale / 1.15, 0.2) }));
-  }
-  function reset() {
-    const img = imgRef.current;
-    if (!img) return;
-    const scaleToFit = Math.max(DISPLAY / img.width, DISPLAY / img.height);
-    setCrop({ x: 0, y: 0, scale: scaleToFit });
-  }
-
   function handleSave() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    // Render at output resolution
     const out = document.createElement("canvas");
     out.width = outputSize;
     out.height = outputSize;
@@ -144,15 +145,12 @@ function ImageCropper({
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Canvas */}
       <div className="relative">
         <canvas
           ref={canvasRef}
           width={DISPLAY}
           height={DISPLAY}
-          className={`border-2 border-[#006AFF] cursor-move bg-gray-100 ${
-            shape === "round" ? "rounded-full" : "rounded-lg"
-          }`}
+          className={`border-2 border-[#006AFF] cursor-move bg-gray-100 ${shape === "round" ? "rounded-full" : "rounded-lg"}`}
           style={{ width: DISPLAY, height: DISPLAY }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
@@ -163,12 +161,12 @@ function ImageCropper({
           Drag to reposition · Blue border = display area on website
         </p>
       </div>
-
-      {/* Controls */}
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={zoomOut}
+          onClick={() =>
+            setCrop((c) => ({ ...c, scale: Math.max(c.scale / 1.15, 0.2) }))
+          }
           className="p-2 rounded-full border hover:bg-gray-50"
           title="Zoom out"
         >
@@ -176,23 +174,31 @@ function ImageCropper({
         </button>
         <button
           type="button"
-          onClick={reset}
+          onClick={() => {
+            const img = imgRef.current;
+            if (!img) return;
+            setCrop({
+              x: 0,
+              y: 0,
+              scale: Math.max(DISPLAY / img.width, DISPLAY / img.height),
+            });
+          }}
           className="p-2 rounded-full border hover:bg-gray-50"
-          title="Reset position"
+          title="Reset"
         >
           <RotateCcw className="w-4 h-4 text-gray-600" />
         </button>
         <button
           type="button"
-          onClick={zoomIn}
+          onClick={() =>
+            setCrop((c) => ({ ...c, scale: Math.min(c.scale * 1.15, 5) }))
+          }
           className="p-2 rounded-full border hover:bg-gray-50"
           title="Zoom in"
         >
           <ZoomIn className="w-4 h-4 text-gray-600" />
         </button>
       </div>
-
-      {/* Action buttons */}
       <div className="flex gap-3">
         <button
           type="button"
@@ -214,7 +220,6 @@ function ImageCropper({
   );
 }
 
-/* ── Main Language Icon Manager ── */
 export default function LanguageIconManager() {
   const { icons, setIcon } = useLanguageIcons();
   const [cropping, setCropping] = useState<{
@@ -223,6 +228,7 @@ export default function LanguageIconManager() {
   } | null>(null);
   const [shape, setShape] = useState<"square" | "round">("square");
   const [saved, setSaved] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   function handleFileSelect(
@@ -232,12 +238,9 @@ export default function LanguageIconManager() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const src = ev.target?.result as string;
-      setCropping({ code, src });
-    };
+    reader.onload = (ev) =>
+      setCropping({ code, src: ev.target?.result as string });
     reader.readAsDataURL(file);
-    // Reset input so same file can be re-selected
     e.target.value = "";
   }
 
@@ -249,43 +252,66 @@ export default function LanguageIconManager() {
     setTimeout(() => setSaved(null), 2000);
   }
 
-  function handleRemove(code: string) {
-    setIcon(code, null);
-  }
+  const filtered = ALL_LANGUAGES.filter(
+    (l) =>
+      search === "" ||
+      l.label.toLowerCase().includes(search.toLowerCase()) ||
+      l.sub.toLowerCase().includes(search.toLowerCase()) ||
+      l.code.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-6">
+      {/* Asset Size Reference */}
+      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          Asset Size Reference
+        </h4>
+        <div className="grid grid-cols-3 gap-3">
+          {ASSET_LABELS.map((a) => (
+            <div
+              key={a.key}
+              className="bg-white rounded-lg p-3 border border-gray-100 text-center"
+            >
+              <div className="text-sm font-bold text-gray-900">{a.label}</div>
+              <div className="text-xs font-mono text-[#006AFF] mt-0.5">
+                {a.size}px
+              </div>
+              <div className="text-[11px] text-gray-400 mt-0.5">{a.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1">
           <h3 className="text-base font-semibold text-gray-900">
             Language Icon Manager
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Upload custom icons for each language. The blue border in the
-            cropper shows the exact display area on the website.
+            {ALL_LANGUAGES.length} languages · Blue border = exact display area
           </p>
         </div>
-        {/* Shape toggle */}
+        <input
+          type="text"
+          placeholder="Search languages..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-3 py-1.5 text-xs border rounded-full outline-none focus:border-[#006AFF] w-36"
+        />
         <div className="flex items-center gap-1 border rounded-full p-1 text-xs">
           <button
             type="button"
             onClick={() => setShape("square")}
-            className={`px-3 py-1 rounded-full transition-colors ${
-              shape === "square"
-                ? "bg-[#006AFF] text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-full transition-colors ${shape === "square" ? "bg-[#006AFF] text-white" : "text-gray-600 hover:bg-gray-100"}`}
           >
             Square
           </button>
           <button
             type="button"
             onClick={() => setShape("round")}
-            className={`px-3 py-1 rounded-full transition-colors ${
-              shape === "round"
-                ? "bg-[#006AFF] text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-full transition-colors ${shape === "round" ? "bg-[#006AFF] text-white" : "text-gray-600 hover:bg-gray-100"}`}
           >
             Round
           </button>
@@ -299,12 +325,12 @@ export default function LanguageIconManager() {
             <h4 className="font-bold text-gray-900 mb-4 text-center">
               Crop Icon for{" "}
               <span style={{ color: "#006AFF" }}>
-                {LANGUAGES.find((l) => l.code === cropping.code)?.label}
+                {ALL_LANGUAGES.find((l) => l.code === cropping.code)?.label}
               </span>
             </h4>
             <ImageCropper
               src={cropping.src}
-              outputSize={160}
+              outputSize={150}
               shape={shape}
               onSave={handleSaveCrop}
               onCancel={() => setCropping(null)}
@@ -313,9 +339,9 @@ export default function LanguageIconManager() {
         </div>
       )}
 
-      {/* Language icon cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {LANGUAGES.map((lang) => {
+      {/* Language icon cards — 5-column grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-5 gap-3">
+        {filtered.map((lang) => {
           const customIcon = icons[lang.code];
           const isSaved = saved === lang.code;
           return (
@@ -323,36 +349,27 @@ export default function LanguageIconManager() {
               key={lang.code}
               className="border rounded-xl p-3 flex flex-col items-center gap-2 bg-gray-50"
             >
-              {/* Preview */}
               <div
-                className={`w-16 h-16 flex items-center justify-center bg-white border-2 border-dashed border-gray-300 ${
-                  shape === "round" ? "rounded-full" : "rounded-lg"
-                } overflow-hidden`}
+                className={`w-16 h-16 flex items-center justify-center bg-white border-2 border-dashed border-gray-300 ${shape === "round" ? "rounded-full" : "rounded-lg"} overflow-hidden`}
               >
                 {customIcon ? (
                   <img
                     src={customIcon}
                     alt={lang.label}
-                    className={`w-full h-full object-cover ${
-                      shape === "round" ? "rounded-full" : "rounded-lg"
-                    }`}
+                    className={`w-full h-full object-cover ${shape === "round" ? "rounded-full" : "rounded-lg"}`}
                   />
                 ) : (
-                  <span className="text-xs text-gray-400 text-center leading-tight px-1">
+                  <span className="text-[10px] text-gray-400 text-center leading-tight px-1">
                     Default SVG
                   </span>
                 )}
               </div>
-
-              {/* Language name */}
               <div className="text-center">
-                <div className="text-sm font-bold text-gray-900">
+                <div className="text-xs font-bold text-gray-900 truncate max-w-full">
                   {lang.label}
                 </div>
-                <div className="text-[11px] text-gray-400">{lang.sub}</div>
+                <div className="text-[10px] text-gray-400">{lang.sub}</div>
               </div>
-
-              {/* Buttons */}
               <div className="flex gap-1.5 w-full">
                 <button
                   type="button"
@@ -369,15 +386,14 @@ export default function LanguageIconManager() {
                 {customIcon && (
                   <button
                     type="button"
-                    onClick={() => handleRemove(lang.code)}
+                    onClick={() => setIcon(lang.code, null)}
                     className="p-1.5 rounded-lg border border-red-200 text-red-400 hover:bg-red-50"
-                    title="Remove custom icon (revert to default)"
+                    title="Remove"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
-
               <input
                 ref={(el) => {
                   fileInputRefs.current[lang.code] = el;
@@ -391,11 +407,9 @@ export default function LanguageIconManager() {
           );
         })}
       </div>
-
       <p className="text-[11px] text-gray-400">
-        Icons are stored locally and persist across sessions. Click "Upload" on
-        any language card to replace its icon. Click ✕ to revert to the default
-        line-art icon.
+        Icons are stored locally. Click Upload to replace. Click ✕ to revert to
+        default SVG. Icon size: 150x150px.
       </p>
     </div>
   );

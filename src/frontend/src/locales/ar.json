@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "allProducts": "جميع المنتجات",
+    "trackOrder": "تتبع الطلب",
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "selectLocation": "اختر الموقع",
+    "useMyLocation": "استخدم موقعي",
+    "allIndia": "جميع أنحاء الهند",
+    "filters": "فلاتر",
+    "search": "ابحث عن منتجات وماركات...",
+    "searchMobile": "ابحث عن منتجات...",
+    "language": "اللغة"
+  },
+  "product": {
+    "addToCart": "أضف إلى السلة",
+    "buyNow": "اشتري الآن",
+    "viewItem": "عرض المنتج",
+    "outOfStock": "نفد من المخزون",
+    "flashSale": "تخفيض سريع",
+    "hotDeal": "صفقة رائجة",
+    "lowStock": "مخزون منخفض"
+  },
+  "checkout": {
+    "title": "الدفع",
+    "shippingAddress": "عنوان الشحن",
+    "paymentMethod": "طريقة الدفع",
+    "placeOrder": "تأكيد الطلب",
+    "grandTotal": "الإجمالي",
+    "subtotal": "المجموع الفرعي",
+    "aflinoRewards": "مكافآت AFLINO",
+    "applyCoins": "استخدم النقاط للخصم (1 نقطة = ₹1)",
+    "coinBalance": "لديك {{count}} نقاط",
+    "minCoins": "يلزم 5 نقاط على الأقل",
+    "payViaRazorpay": "الدفع عبر Razorpay",
+    "name": "الاسم الكامل",
+    "phone": "رقم الهاتف",
+    "address": "العنوان",
+    "city": "المدينة",
+    "state": "الولاية",
+    "pincode": "الرمز البريدي"
+  },
+  "tracking": {
+    "title": "تتبع الطلب",
+    "orderPlaced": "تم الطلب",
+    "packed": "تم التغليف",
+    "shipped": "تم الشحن",
+    "outForDelivery": "في الطريق",
+    "delivered": "تم التسليم",
+    "needHelp": "تحتاج مساعدة؟",
+    "trackExternal": "تتبع على الموقع الخارجي",
+    "gatepassReady": "تصريح الاستلام الرقمي جاهز.",
+    "courierInfo": "معلومات الشحن",
+    "awbNumber": "رقم AWB",
+    "itemSummary": "ملخص الطلب"
+  },
+  "dashboard": {
+    "myOrders": "طلباتي",
+    "myWishlist": "المفضلة",
+    "myWallet": "محفظتي",
+    "savedAddresses": "العناوين المحفوظة",
+    "myReviews": "تقييماتي",
+    "profile": "الملف الشخصي",
+    "logout": "تسجيل الخروج",
+    "trackOrder": "تتبع",
+    "buyAgain": "اشتر مجدداً",
+    "writeReview": "اكتب تقييماً",
+    "moveToCart": "أضف إلى السلة",
+    "remove": "إزالة"
+  },
+  "wallet": {
+    "balance": "رصيد AFLINO",
+    "coins": "نقاط",
+    "redeemable": "استرد عند الدفع",
+    "history": "سجل المعاملات",
+    "earnCoins": "اكتب تقييماً لربح 3 نقاط، أضف صورة للحصول على 5 نقاط!"
+  },
+  "footer": {
+    "about": "عن AFLINO",
+    "contact": "تواصل معنا",
+    "privacy": "سياسة الخصوصية",
+    "terms": "الشروط والأحكام",
+    "seller": "بع على AFLINO",
+    "copyright": "© 2025 AFLINO. جميع الحقوق محفوظة."
+  },
+  "common": {
+    "back": "رجوع",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "loading": "جار التحميل...",
+    "confirm": "تأكيد",
+    "close": "إغلاق"
+  }
+}
