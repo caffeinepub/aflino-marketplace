@@ -1,5 +1,6 @@
 import CategoryFeedSection from "@/components/CategoryFeedSection";
 import FlashSaleSection from "@/components/FlashSaleSection";
+import WatchAndShopSection from "@/components/WatchAndShopSection";
 import {
   isBannerActive,
   useHomepageManager,
@@ -385,6 +386,7 @@ export default function Hero({
   return (
     <section id="home" className="w-full" data-ocid="hero.section">
       {homepageSections.map((section) => renderSection(section.key))}
+      <WatchAndShopSection />
     </section>
   );
 }

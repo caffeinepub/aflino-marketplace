@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 interface HeaderProps {
   onLoginClick: () => void;
   onRegisterClick: () => void;
+  onAffiliateClick?: () => void;
 }
 
 const navLinks = [
@@ -329,7 +330,11 @@ function CategoryCarousel() {
   );
 }
 
-export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
+export default function Header({
+  onLoginClick,
+  onRegisterClick,
+  onAffiliateClick,
+}: HeaderProps) {
   const { t } = useTranslation();
   const [activeLink, setActiveLink] = useState("nav.home");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -456,6 +461,18 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
                   >
                     {t("nav.register")}
                   </Button>
+                  {onAffiliateClick && (
+                    <Button
+                      type="button"
+                      onClick={onAffiliateClick}
+                      variant="outline"
+                      className="rounded-full px-5 h-8 text-sm font-semibold border-blue-200 hidden lg:inline-flex"
+                      style={{ color: "#006AFF" }}
+                      data-ocid="header.affiliate.button"
+                    >
+                      Affiliate
+                    </Button>
+                  )}
                 </div>
 
                 {/* Mobile: icons + hamburger */}

@@ -5,6 +5,7 @@ import {
   initialAdvancedState,
 } from "@/components/ProductAdvancedSections";
 import AdminCommandCenter from "@/components/admin/AdminCommandCenter";
+import AffiliateManagerTab from "@/components/admin/AffiliateManagerTab";
 import BrandSettingsTab from "@/components/admin/BrandSettingsTab";
 import CommunicationSettings from "@/components/admin/CommunicationSettings";
 import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
@@ -69,6 +70,7 @@ import {
   TrendingUp,
   Upload,
   Users,
+  Users2,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -88,7 +90,8 @@ type Tab =
   | "brand"
   | "reviews"
   | "analytics"
-  | "languages";
+  | "languages"
+  | "affiliates";
 
 interface AdminVariantRow {
   id: string;
@@ -524,6 +527,19 @@ export default function AdminDashboard() {
           >
             <Globe className="w-4 h-4" />
             Languages
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("affiliates")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "affiliates"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.affiliates.tab"
+          >
+            <Users2 className="w-4 h-4" />
+            Affiliates
           </button>
 
           <button
@@ -2269,6 +2285,17 @@ export default function AdminDashboard() {
               transition={{ duration: 0.3 }}
             >
               <AdminCommandCenter orders={orders} />
+            </motion.div>
+          )}
+          {activeTab === "affiliates" && (
+            <motion.div
+              key="affiliates"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <AffiliateManagerTab />
             </motion.div>
           )}
         </main>
