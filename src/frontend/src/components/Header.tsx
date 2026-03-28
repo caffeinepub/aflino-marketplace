@@ -4,24 +4,16 @@ import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useTranslation } from "@/context/I18nContext";
 import { PRODUCTS } from "@/data/products";
 import {
-  Baby,
-  Book,
   Camera,
   ChevronDown,
-  Cpu,
   Heart,
-  Home,
   MapPin,
   Menu,
   Mic,
   Navigation,
   Search,
-  Shirt,
-  ShoppingBag,
   SlidersHorizontal,
-  Sparkles,
   User,
-  Watch,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -37,16 +29,17 @@ const navLinks = [
   { labelKey: "nav.allProducts", href: "#products" },
 ];
 
-const CATEGORIES = [
-  { label: "Fashion", icon: Shirt, color: "#EC008C" },
-  { label: "Electronics", icon: Cpu, color: "#006AFF" },
-  { label: "Home & Living", icon: Home, color: "#6366f1" },
-  { label: "Beauty", icon: Sparkles, color: "#f43f5e" },
-  { label: "Bags", icon: ShoppingBag, color: "#f59e0b" },
-  { label: "Watches", icon: Watch, color: "#10b981" },
-  { label: "Books", icon: Book, color: "#8b5cf6" },
-  { label: "Kids", icon: Baby, color: "#ec4899" },
-  { label: "Sports", icon: User, color: "#0ea5e9" },
+const SNAP_CATEGORIES = [
+  { label: "All", id: "all" },
+  { label: "Women", id: "women" },
+  { label: "Men", id: "men" },
+  { label: "Kids", id: "kids" },
+  { label: "Fashion", id: "fashion" },
+  { label: "Electronics", id: "electronics" },
+  { label: "Home & Living", id: "home" },
+  { label: "Beauty", id: "beauty" },
+  { label: "Sports", id: "sports" },
+  { label: "Books", id: "books" },
 ];
 
 function SearchBox({
@@ -54,11 +47,13 @@ function SearchBox({
   onChange,
   placeholder,
   ocid,
+  scrolledDown,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   ocid: string;
+  scrolledDown?: boolean;
 }) {
   const [show, setShow] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -82,15 +77,18 @@ function SearchBox({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const borderColor = scrolledDown ? "#e5e7eb" : "#006AFF";
+  const iconColor = scrolledDown ? "#9ca3af" : "#006AFF";
+
   return (
     <div ref={wrapRef} className="relative w-full">
       <div
-        className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border-2"
-        style={{ borderColor: "#006AFF" }}
+        className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border-2 transition-colors duration-200"
+        style={{ borderColor }}
       >
         <Search
-          className="w-4 h-4 flex-shrink-0"
-          style={{ color: "#006AFF" }}
+          className="w-4 h-4 flex-shrink-0 transition-colors duration-200"
+          style={{ color: iconColor }}
         />
         <input
           type="text"
@@ -109,14 +107,20 @@ function SearchBox({
           className="flex-shrink-0 p-1 rounded-full hover:bg-blue-50 transition-colors"
           aria-label="Voice search"
         >
-          <Mic className="w-4 h-4" style={{ color: "#006AFF" }} />
+          <Mic
+            className="w-4 h-4 transition-colors duration-200"
+            style={{ color: iconColor }}
+          />
         </button>
         <button
           type="button"
           className="flex-shrink-0 p-1 rounded-full hover:bg-blue-50 transition-colors"
           aria-label="Image search"
         >
-          <Camera className="w-4 h-4" style={{ color: "#006AFF" }} />
+          <Camera
+            className="w-4 h-4 transition-colors duration-200"
+            style={{ color: iconColor }}
+          />
         </button>
       </div>
 
@@ -267,35 +271,43 @@ function LocationPill() {
 }
 
 function CategoryCarousel() {
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const scrollRef = useRef<HTMLDivElement>(null);
+
   return (
     <div
-      className="border-t border-b"
-      style={{ borderColor: "#0056b3", borderWidth: "1px" }}
+      style={{
+        border: "1px solid #0056b3",
+        backgroundColor: "white",
+      }}
     >
       <div className="max-w-[1200px] mx-auto px-4">
         <div
           ref={scrollRef}
-          className="flex items-center gap-1 overflow-x-auto py-1.5 scrollbar-hide"
+          className="flex items-center overflow-x-auto py-1"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
+          {SNAP_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
             return (
               <button
-                key={cat.label}
+                key={cat.id}
                 type="button"
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 hover:bg-gray-50 transition-colors"
-                style={{ color: "#444" }}
-                onClick={() =>
+                onClick={() => {
+                  setSelectedCategory(cat.id);
                   window.dispatchEvent(
                     new CustomEvent("aflino:filterCategory", {
                       detail: cat.label,
                     }),
-                  )
-                }
+                  );
+                }}
+                className="flex items-center justify-center px-4 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-200 rounded-full mx-0.5"
+                style={{
+                  backgroundColor: isSelected ? "#006AFF" : "transparent",
+                  color: isSelected ? "#ffffff" : "#555555",
+                }}
+                data-ocid="nav.tab"
               >
-                <Icon className="w-3 h-3" style={{ color: cat.color }} />
                 {cat.label}
               </button>
             );
@@ -315,15 +327,23 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   const { customerState, setCustomerState, requestLocation, indianStates } =
     useGeoLocation();
   const [mobilePicker, setMobilePicker] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolledDown, setScrolledDown] = useState(false);
+  const [scrollingUp, setScrollingUp] = useState(false);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     function onScroll() {
-      setScrolled(window.scrollY > 100);
+      const currentY = window.scrollY;
+      setScrolledDown(currentY > 50);
+      setScrollingUp(currentY < lastScrollY.current);
+      lastScrollY.current = currentY;
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Part 1 and Part 3 are visible when NOT scrolled down, OR when scrolling back up
+  const showTopParts = !scrolledDown || scrollingUp;
 
   function openFilters() {
     setMobileOpen(false);
@@ -331,16 +351,19 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      {/* Row 1: Logo + nav + location + icons — hidden when scrolled */}
+    <header
+      className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm"
+      style={{ borderBottom: showTopParts ? "1px solid #e5e7eb" : "none" }}
+    >
+      {/* Part 1: Logo + Nav — fades out on scroll down */}
       <AnimatePresence initial={false}>
-        {!scrolled && (
+        {showTopParts && (
           <motion.div
             key="top-row"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
@@ -453,18 +476,32 @@ export default function Header({ onLoginClick, onRegisterClick }: HeaderProps) {
         )}
       </AnimatePresence>
 
-      {/* Row 2: Search bar — always sticky */}
+      {/* Part 2: Search bar — always visible, sticky at top when scrolled */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-2">
         <SearchBox
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder={t("nav.search")}
           ocid="header.search_input"
+          scrolledDown={scrolledDown && !scrollingUp}
         />
       </div>
 
-      {/* Row 3: Category Carousel — always visible */}
-      <CategoryCarousel />
+      {/* Part 3: Category Carousel — hidden when scrolled down */}
+      <AnimatePresence initial={false}>
+        {showTopParts && (
+          <motion.div
+            key="category-row"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <CategoryCarousel />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Drawer */}
       <AnimatePresence>

@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import LeavesBackground from "@/components/LeavesBackground";
 import LocationModal from "@/components/LocationModal";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
@@ -47,8 +48,8 @@ type View =
   | "checkout"
   | "order-success";
 
-// Header is 2 rows: ~52px top bar + ~46px search = 98px
-const HEADER_HEIGHT = "pt-[98px]";
+// Header is 3 rows: ~52px top bar + ~46px search + ~36px categories = 134px, use 145px for safety
+const HEADER_HEIGHT = "pt-[145px]";
 
 function AppContent() {
   const { role } = useRole();
@@ -141,6 +142,7 @@ function AppContent() {
   if (view === "history")
     return (
       <div className="min-h-screen bg-white">
+        <LeavesBackground />
         <Header
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
@@ -162,6 +164,7 @@ function AppContent() {
   if (currentProductId !== null) {
     return (
       <div className="min-h-screen bg-white">
+        <LeavesBackground />
         <Header
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
@@ -181,6 +184,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-white">
+      <LeavesBackground />
       <Header
         onLoginClick={() => setView("login")}
         onRegisterClick={() => setView("seller-register")}
