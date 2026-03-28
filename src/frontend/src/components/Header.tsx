@@ -1,6 +1,7 @@
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { useGeoLocation } from "@/context/GeoLocationContext";
+import { useHomepageManager } from "@/context/HomepageManagerContext";
 import { useTranslation } from "@/context/I18nContext";
 import { PRODUCTS } from "@/data/products";
 import {
@@ -27,19 +28,6 @@ interface HeaderProps {
 const navLinks = [
   { labelKey: "nav.home", href: "#home" },
   { labelKey: "nav.allProducts", href: "#products" },
-];
-
-const SNAP_CATEGORIES = [
-  { label: "All", id: "all" },
-  { label: "Women", id: "women" },
-  { label: "Men", id: "men" },
-  { label: "Kids", id: "kids" },
-  { label: "Fashion", id: "fashion" },
-  { label: "Electronics", id: "electronics" },
-  { label: "Home & Living", id: "home" },
-  { label: "Beauty", id: "beauty" },
-  { label: "Sports", id: "sports" },
-  { label: "Books", id: "books" },
 ];
 
 function SearchBox({
@@ -273,21 +261,33 @@ function LocationPill() {
 function CategoryCarousel() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { categories } = useHomepageManager();
+
+  const allPill = {
+    id: "all",
+    label: "All",
+    iconUrl: undefined as string | undefined,
+    link: undefined as string | undefined,
+  };
+  const pills = [
+    allPill,
+    ...categories.map((c) => ({
+      id: c.id,
+      label: c.label,
+      iconUrl: c.iconUrl || c.imageUrl,
+      link: c.link,
+    })),
+  ];
 
   return (
-    <div
-      style={{
-        border: "1px solid #0056b3",
-        backgroundColor: "white",
-      }}
-    >
+    <div style={{ backgroundColor: "white" }}>
       <div className="max-w-[1200px] mx-auto px-4">
         <div
           ref={scrollRef}
-          className="flex items-center overflow-x-auto py-1"
+          className="flex items-center overflow-x-auto py-2 gap-2 no-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {SNAP_CATEGORIES.map((cat) => {
+          {pills.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -301,13 +301,24 @@ function CategoryCarousel() {
                     }),
                   );
                 }}
-                className="flex items-center justify-center px-4 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-200 rounded-full mx-0.5"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-200 rounded-full"
                 style={{
-                  backgroundColor: isSelected ? "#006AFF" : "transparent",
-                  color: isSelected ? "#ffffff" : "#555555",
+                  border: "1px solid #0056B3",
+                  backgroundColor: isSelected ? "#0056B3" : "transparent",
+                  color: isSelected ? "#ffffff" : "#0056B3",
                 }}
                 data-ocid="nav.tab"
               >
+                {cat.iconUrl && (
+                  <img
+                    src={cat.iconUrl}
+                    alt={cat.label}
+                    className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                    style={{
+                      filter: isSelected ? "brightness(0) invert(1)" : "none",
+                    }}
+                  />
+                )}
                 {cat.label}
               </button>
             );

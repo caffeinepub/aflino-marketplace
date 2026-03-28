@@ -450,50 +450,91 @@ function CategoriesSection() {
     uploadProgress,
   } = useHomepageManager();
   const [label, setLabel] = useState("");
+  const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const { onDragStart, onDragOver, onDrop } = useDragReorder(
-    categories,
-    reorderCategories,
-  );
 
   async function handleAdd() {
     if (!file || !label.trim()) return;
     setUploading(true);
-    await addCategory(file, label.trim());
+    await addCategory(file, label.trim(), link.trim());
     setUploading(false);
     setLabel("");
+    setLink("");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  function handleDragStart(i: number) {
+    setDragIndex(i);
+  }
+
+  function handleDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === i) return;
+    const newOrder = [...categories];
+    const [moved] = newOrder.splice(dragIndex, 1);
+    newOrder.splice(i, 0, moved);
+    reorderCategories(newOrder);
+    setDragIndex(i);
+  }
+
+  function handleDrop() {
+    setDragIndex(null);
+  }
+
   return (
     <div className="space-y-6">
-      <h3 className="font-semibold text-gray-800">
-        Category Circles ({categories.length})
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-800">
+          Category Carousel Pills ({categories.length})
+        </h3>
+        <span className="text-xs text-gray-400">Drag to reorder</span>
+      </div>
+
       <div className="space-y-2">
         {categories.map((cat: HomepageCategory, i: number) => (
           <div
             key={cat.id}
             draggable
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => onDragOver(e, i)}
-            onDrop={onDrop}
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-200 transition-colors"
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={(e) => handleDragOver(e, i)}
+            onDrop={handleDrop}
+            className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg border transition-colors cursor-grab active:cursor-grabbing ${dragIndex === i ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-blue-200"}`}
             data-ocid={`homepage.item.${i + 1}`}
           >
             <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <img
-              src={cat.imageUrl}
+              src={cat.iconUrl || cat.imageUrl}
               alt={cat.label}
-              className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-gray-200"
+              className="w-10 h-10 rounded-md object-cover flex-shrink-0 border border-gray-200"
+              style={{ width: 40, height: 40 }}
             />
-            <p className="flex-1 text-sm font-medium text-gray-800">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {cat.label}
+              </p>
+              {cat.link && (
+                <p className="text-xs text-blue-500 truncate">{cat.link}</p>
+              )}
+            </div>
+            <div
+              className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0"
+              style={{
+                border: "1px solid #0056B3",
+                color: "#0056B3",
+                fontSize: 11,
+              }}
+            >
+              <img
+                src={cat.iconUrl || cat.imageUrl}
+                alt=""
+                className="w-3.5 h-3.5 rounded-full object-cover"
+              />
               {cat.label}
-            </p>
+            </div>
             <button
               type="button"
               onClick={() => deleteCategory(cat.id)}
@@ -510,10 +551,11 @@ function CategoriesSection() {
             className="text-sm text-gray-400 text-center py-6"
             data-ocid="homepage.empty_state"
           >
-            No categories yet.
+            No categories yet. Add your first category below.
           </p>
         )}
       </div>
+
       <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
         <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
           <Plus className="w-4 h-4" style={{ color: "#006AFF" }} />
@@ -521,7 +563,7 @@ function CategoriesSection() {
         </p>
         <div>
           <Label className="text-xs text-gray-500 mb-1 block">
-            Circular Image *
+            Icon Image (150×150 recommended) *
           </Label>
           <Input
             ref={fileRef}
@@ -531,15 +573,31 @@ function CategoriesSection() {
             className="text-sm"
             data-ocid="homepage.upload_button"
           />
+          <p className="text-xs text-gray-400 mt-1">
+            Shown as icon inside pill button on homepage
+          </p>
         </div>
         <div>
-          <Label className="text-xs text-gray-500 mb-1 block">Label *</Label>
+          <Label className="text-xs text-gray-500 mb-1 block">
+            Category Name *
+          </Label>
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Kitchen"
+            placeholder="e.g. Kitchen, Fashion, Electronics"
             className="text-sm"
             data-ocid="homepage.input"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500 mb-1 block">
+            Link / URL (optional)
+          </Label>
+          <Input
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="e.g. /category/electronics or #electronics"
+            className="text-sm"
           />
         </div>
         {uploading && uploadProgress > 0 && (
@@ -554,11 +612,10 @@ function CategoriesSection() {
           type="button"
           disabled={uploading || !file || !label.trim()}
           onClick={handleAdd}
-          className="gap-2 w-full text-white"
+          className="w-full text-sm"
           style={{ backgroundColor: "#006AFF" }}
-          data-ocid="homepage.submit_button"
+          data-ocid="homepage.save_button"
         >
-          <Plus className="w-4 h-4" />
           {uploading ? "Uploading…" : "Add Category"}
         </Button>
       </div>

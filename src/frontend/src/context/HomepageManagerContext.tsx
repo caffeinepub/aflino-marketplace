@@ -21,7 +21,9 @@ export interface HomepageBanner {
 export interface HomepageCategory {
   id: string;
   imageUrl: string;
+  iconUrl?: string;
   label: string;
+  link?: string;
   order: number;
 }
 
@@ -424,7 +426,7 @@ interface HomepageManagerContextValue {
   ) => void;
   deleteBanner: (id: string) => void;
   reorderBanners: (newOrder: HomepageBanner[]) => void;
-  addCategory: (file: File, label: string) => Promise<void>;
+  addCategory: (file: File, label: string, link?: string) => Promise<void>;
   updateCategory: (
     id: string,
     fields: Partial<Omit<HomepageCategory, "id">>,
@@ -570,11 +572,18 @@ export function HomepageManagerProvider({
   }, []);
 
   const addCategory = useCallback(
-    async (file: File, label: string) => {
+    async (file: File, label: string, link?: string) => {
       const imageUrl = await uploadImage(file);
       setCategories((prev) => [
         ...prev,
-        { id: `c_${Date.now()}`, imageUrl, label, order: prev.length },
+        {
+          id: `c_${Date.now()}`,
+          imageUrl,
+          iconUrl: imageUrl,
+          label,
+          link: link || "",
+          order: prev.length,
+        },
       ]);
       toast.success("Category added!");
     },
