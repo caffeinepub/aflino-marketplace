@@ -1,9 +1,13 @@
-const CACHE_NAME = "aflino-cache-v1";
+const CACHE_NAME = "aflino-cache-v2";
 const PRECACHE_URLS = [
   "/",
   "/manifest.json",
+  "/manifest-customer.json",
+  "/manifest-seller.json",
   "/assets/generated/aflino-icon-192.dim_192x192.png",
   "/assets/generated/aflino-icon-512.dim_512x512.png",
+  "/assets/generated/aflino-seller-icon-192.dim_192x192.png",
+  "/assets/generated/aflino-seller-icon-512.dim_512x512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -67,4 +71,33 @@ self.addEventListener("fetch", (event) => {
       }),
     );
   }
+});
+
+// Push notification handler
+self.addEventListener("push", (event) => {
+  const data = event.data?.json() ?? {};
+  const title = data.title || "AFLINO";
+  const options = {
+    body: data.body || "You have a new notification",
+    icon: "/assets/generated/aflino-icon-192.dim_192x192.png",
+    badge: "/assets/generated/aflino-icon-192.dim_192x192.png",
+    tag: data.tag || "aflino-notification",
+    data: { url: data.url || "/" },
+    requireInteraction: data.requireInteraction || false,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click handler
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(url) && "focus" in client) return client.focus();
+      }
+      return clients.openWindow(url);
+    }),
+  );
 });

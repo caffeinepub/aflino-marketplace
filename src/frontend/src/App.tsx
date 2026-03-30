@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import IOSInstallBanner from "@/components/IOSInstallBanner";
 import LeavesBackground from "@/components/LeavesBackground";
 import LocationModal from "@/components/LocationModal";
 import ProductGrid from "@/components/ProductGrid";
@@ -261,6 +262,7 @@ export default function App() {
                                       <ProductProvider>
                                         <FlashSaleProvider>
                                           <Toaster />
+                                          <IOSInstallBanner />
                                           <AppContent />
                                         </FlashSaleProvider>
                                       </ProductProvider>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useFlashSale } from "@/context/FlashSaleContext";
 import { useRole } from "@/context/RoleContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { Heart, Star } from "lucide-react";
+import { Heart, Share2, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export interface ProductData {
@@ -83,6 +83,21 @@ export default function ProductCard({
     });
   }
 
+  function handleAffiliateShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const affiliateId = localStorage.getItem("aflino_affiliate_id") ?? "aff";
+    const link = `${window.location.origin}/product/${product.id}?ref=${affiliateId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      const el = document.getElementById(`aff-toast-${product.id}`);
+      if (el) {
+        el.style.opacity = "1";
+        setTimeout(() => {
+          el.style.opacity = "0";
+        }, 2000);
+      }
+    });
+  }
+
   // Determine badge and price
   const displayPrice = activeSale ? activeSale.salePrice : product.price;
   const displayOriginalPrice = activeSale
@@ -128,6 +143,23 @@ export default function ProductCard({
           className={`relative h-44 bg-gradient-to-br ${product.gradient} flex items-center justify-center`}
         >
           {badgeEl}
+          {/* Affiliate Share Button */}
+          <button
+            type="button"
+            onClick={handleAffiliateShare}
+            className="absolute bottom-2.5 left-2.5 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"
+            title="Copy Affiliate Link"
+            data-ocid={`${scope}.secondary_button.${index}`}
+          >
+            <Share2 className="w-4 h-4" style={{ color: "#9ca3af" }} />
+          </button>
+          <div
+            id={`aff-toast-${product.id}`}
+            style={{ opacity: 0, transition: "opacity 0.3s" }}
+            className="absolute top-2 left-2 z-20 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg pointer-events-none"
+          >
+            Link copied!
+          </div>
           <button
             type="button"
             onClick={handleHeartClick}

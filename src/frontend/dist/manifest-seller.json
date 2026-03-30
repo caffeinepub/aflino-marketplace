@@ -1,0 +1,17 @@
+{
+  "name": "AFLINO Seller",
+  "short_name": "AFLINO Sell",
+  "description": "Manage your AFLINO store — orders, products, payouts",
+  "start_url": "/?app=seller",
+  "id": "aflino-seller",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#EC008C",
+  "orientation": "portrait-primary",
+  "categories": ["business"],
+  "icons": [
+    { "src": "/assets/generated/aflino-seller-icon-192.dim_192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/generated/aflino-seller-icon-512.dim_512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/generated/aflino-seller-icon-512.dim_512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,65 +1,53 @@
-# AFLINO Marketplace — PWA Implementation
+# AFLINO Marketplace — Dual-PWA Architecture
 
 ## Current State
-AFLINO is a React + Vite + ICP frontend. No PWA features exist:
-- No `manifest.json`
-- No service worker
-- No `<meta>` iOS/PWA tags in `index.html`
-- No install prompt UI anywhere
-- No offline caching
-- Icons exist at:
-  - `/assets/generated/aflino-icon-512.dim_512x512.png`
-  - `/assets/generated/aflino-icon-192.dim_192x192.png`
+- Single PWA with one manifest.json, basic service worker with cache-first strategy
+- PWABrandingSection exists in Admin — uploads icon/splash to localStorage only
+- No push notification support
+- No dual-identity PWA (Customer vs Seller)
+- No maskable icon safe-zone generation
+- Camera/QR components not yet wired
+- sw.js handles offline caching but no push event listener
 
 ## Requested Changes (Diff)
 
 ### Add
-- `public/manifest.json` — PWA web app manifest (name: AFLINO, display: standalone, theme: #006AFF, icons at 192 and 512)
-- `public/sw.js` — Service Worker with:
-  - Cache-first strategy for static assets (JS, CSS, images, fonts)
-  - Network-first + cache fallback for page navigations
-  - On `install` event: pre-cache shell assets and both PWA icons
-  - On `fetch` event: serve from cache when offline; cache new responses as they come in
-  - On `activate` event: purge stale caches
-- iOS PWA meta tags in `index.html`: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`, `apple-touch-icon` link tag pointing to 192px icon
-- `<link rel="manifest">` and `<meta name="theme-color">` in `index.html`
-- `src/hooks/usePWAInstall.ts` — Custom hook that:
-  - Listens for `beforeinstallprompt` event (Android/Desktop)
-  - Stores the deferred prompt
-  - Exposes `canInstall: boolean` and `triggerInstall(): void`
-  - Also registers the service worker on mount
-- `src/components/InstallPWAButton.tsx` — Small install button component:
-  - Uses `usePWAInstall` hook
-  - Renders an "Install App" button with download icon when `canInstall` is true
-  - On click: triggers the native browser install prompt
-  - On iOS (where `beforeinstallprompt` doesn't fire): shows a tooltip/modal with instructions: "Tap Share → Add to Home Screen"
-  - Hides itself once app is installed (listens for `appinstalled` event)
-- `src/context/PWABrandingContext.tsx` — Context that stores admin-uploaded PWA icon URL and splash logo URL (from localStorage/state), used to override manifest icons dynamically via a generated `/manifest.json` endpoint approach
-- Admin Dashboard → Settings tab → new **Branding** sub-section:
-  - "PWA App Icon (512x512)" upload field with preview
-  - "Splash Screen Logo" upload field with preview
-  - Stored in localStorage-based PWA branding state (since blob-storage is already in the project but manifests are static, we store URLs and display them in the admin UI; the actual manifest.json points to the generated icons for now with an admin note that changing requires re-deploy — OR we use a dynamic manifest approach via a JS-generated manifest)
-  - Show a live preview of how the icon will look on a phone home screen
+- `manifest-customer.json` — AFLINO Customer PWA manifest (start_url: `/?app=customer`)
+- `manifest-seller.json` — AFLINO Seller PWA manifest (start_url: `/?app=seller`)
+- Dynamic manifest injection via React `<link rel="manifest">` based on current route/context
+- Maskable icon support: separate `purpose: "maskable"` icon entries with safe-zone padding
+- Web Push API: VAPID key generation (stored in Admin settings), subscription management, push event handler in service worker
+- Push notification triggers: New Order (Seller), Low Stock (Seller), Payout Released (Seller), Order Status Update (Customer)
+- Notification permission prompt UI — shown contextually in Seller and Customer dashboards
+- iOS Add-to-Home-Screen guidance banner (detects iOS Safari, no beforeinstallprompt)
+- Camera integration in Seller Dashboard: Quick Add Product with phone camera capture
+- QR scanner in Seller Dashboard: scan QR code to update delivery status
+- Admin > Branding: maskable icon preview showing 80% safe zone (the circle/squircle Android uses)
+- Admin > Branding: triggers manifest regeneration for both Customer and Seller manifests
+- `usePWAIdentity` hook: detects if running as Customer PWA or Seller PWA based on URL params or localStorage
+- Affiliate Share button in Customer/Affiliate portal: copy product affiliate link instantly
 
 ### Modify
-- `src/frontend/index.html` — Add all PWA meta tags, manifest link, theme-color, apple-touch-icon
-- `src/components/Header.tsx` — Add `<InstallPWAButton>` in the right side of the header, between the language switcher and user icon. Only renders when `canInstall` is true (auto-hides otherwise).
-- `src/pages/CustomerDashboard.tsx` — Add Install App section in Settings tab
-- `src/pages/SellerDashboard.tsx` — Add Install App section in Settings tab
-- `src/pages/AffiliateDashboard.tsx` — Add Install App section in Settings tab
-- `src/pages/AdminDashboard.tsx` — Add Branding sub-section in Settings tab
+- `sw.js` — add push event listener, notificationclick handler, update CACHE_NAME to v2
+- `PWABrandingSection.tsx` — add maskable icon preview with safe-zone circle overlay, add "Apply to Both Apps" button, generate both manifests
+- `main.tsx` — inject correct manifest link dynamically based on app identity
+- Admin Settings > Branding section — add VAPID public key field and push notification test button
+- Seller Dashboard header — add "Enable Notifications" bell button if push not yet subscribed
+- Customer Dashboard header — add "Enable Notifications" bell button if push not yet subscribed
 
 ### Remove
-- Nothing removed
+- Nothing removed — all existing functionality preserved
 
 ## Implementation Plan
-1. Create `src/frontend/public/manifest.json` with AFLINO branding, icons, display=standalone, theme=#006AFF, start_url=/
-2. Create `src/frontend/public/sw.js` — service worker with cache-first for assets, network-first for navigation, offline fallback shell
-3. Update `src/frontend/index.html` — add all required meta tags for iOS PWA + Android PWA + manifest link
-4. Create `src/frontend/src/hooks/usePWAInstall.ts` — hook managing beforeinstallprompt, SW registration, appinstalled event
-5. Create `src/frontend/src/components/InstallPWAButton.tsx` — button that shows only when installable, handles iOS fallback with instructions
-6. Create `src/frontend/src/context/PWABrandingContext.tsx` — admin-editable branding state
-7. Wire `InstallPWAButton` into Header (between language switcher and user icon)
-8. Wire `InstallPWAButton` + install section into Customer/Seller/Affiliate dashboard Settings tabs
-9. Add Branding section in AdminDashboard Settings tab with icon upload previews and PWA branding state
-10. Wrap App in PWABrandingContext provider
+1. Create `manifest-customer.json` and `manifest-seller.json` with correct start_url, name, icons (any + maskable separate entries)
+2. Create `usePWAIdentity` hook that reads `?app=customer|seller` or localStorage `aflino_pwa_identity`
+3. Update `main.tsx` to dynamically inject the correct manifest `<link>` tag
+4. Update `sw.js` to add push event listener and notificationclick handler; bump cache to v2
+5. Build `usePushNotifications` hook: requestPermission, subscribe to push, store subscription in canister or localStorage
+6. Add push notification triggers in order creation, low stock check, and payout logic (frontend simulation since backend is Motoko)
+7. Update `PWABrandingSection` with maskable icon safe-zone preview, dual-manifest regeneration
+8. Wire `camera` component into Seller Dashboard > Quick Add Product flow
+9. Wire `qr-code` scanner component into Seller Dashboard > Order Management > Scan to Update Status
+10. Add iOS detection banner for Add-to-Home-Screen prompt
+11. Add Affiliate Share button in Customer product cards and Affiliate dashboard
+12. Admin > Branding: VAPID public key input + test notification button

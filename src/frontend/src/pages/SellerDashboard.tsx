@@ -1,7 +1,9 @@
 import GatepassQR from "@/components/GatepassQR";
+import IOSInstallBanner from "@/components/IOSInstallBanner";
 import IndiaPostFallbackModal from "@/components/IndiaPostFallbackModal";
 import InstallPWAButton from "@/components/InstallPWAButton";
 import InvoiceButton from "@/components/InvoiceButton";
+import NotificationEnableButton from "@/components/NotificationEnableButton";
 import {
   type AdvancedFormState,
   ProductAdvancedSections,
@@ -10,6 +12,8 @@ import {
 } from "@/components/ProductAdvancedSections";
 import ShippingLabelButton from "@/components/ShippingLabelButton";
 import BulkCSVManager from "@/components/seller/BulkCSVManager";
+import QRScannerModal from "@/components/seller/QRScannerModal";
+import QuickAddProductModal from "@/components/seller/QuickAddProductModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,11 +50,13 @@ import {
   AlertCircle,
   BarChart3,
   Bell,
+  Camera,
   ClipboardList,
   Clock,
   LogOut,
   Package,
   Plus,
+  QrCode,
   ShoppingBag,
   Trash2,
   TrendingUp,
@@ -146,6 +152,9 @@ export default function SellerDashboard({
   const [gatepassOrderId, setGatepassOrderId] = useState<string | null>(null);
   const [indiaPostOrderId, setIndiaPostOrderId] = useState<string | null>(null);
   const [showIndiaPostModal, setShowIndiaPostModal] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [, setQrScannedOrderId] = useState<string | null>(null);
   const [upgradeGstin, setUpgradeGstin] = useState("");
   const [upgradePan, setUpgradePan] = useState("");
 
@@ -443,6 +452,7 @@ export default function SellerDashboard({
                   </div>
                 </div>
               )}
+              <NotificationEnableButton />
             </div>
             <Button
               type="button"
@@ -1455,6 +1465,15 @@ export default function SellerDashboard({
                                     >
                                       India Post
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowQRScanner(true)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-blue-300 text-blue-600 bg-blue-50 text-xs font-medium hover:bg-blue-100 transition-colors"
+                                      data-ocid={`seller.orders.qrscan.${i + 1}`}
+                                    >
+                                      <QrCode className="w-3 h-3" />
+                                      Scan QR
+                                    </button>
                                   </>
                                 )}
                               </div>
@@ -1468,6 +1487,19 @@ export default function SellerDashboard({
               </div>
             )}
           </motion.div>
+          {/* Mobile Camera FAB - Quick Add Product */}
+          {activeTab === "products" && (
+            <button
+              type="button"
+              onClick={() => setShowQuickAdd(true)}
+              className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-white transition-transform hover:scale-105"
+              style={{ backgroundColor: "#006AFF" }}
+              aria-label="Quick Add Product"
+              data-ocid="seller.quickadd.open_modal_button"
+            >
+              <Camera className="w-6 h-6" />
+            </button>
+          )}
         </main>
         <IndiaPostFallbackModal
           type="seller"
@@ -1526,6 +1558,24 @@ export default function SellerDashboard({
             }
           />
         )}
+        {/* Quick Add Product Modal */}
+        <QuickAddProductModal
+          open={showQuickAdd}
+          onClose={() => setShowQuickAdd(false)}
+        />
+        {/* QR Scanner Modal */}
+        <QRScannerModal
+          open={showQRScanner}
+          onClose={() => setShowQRScanner(false)}
+          onOrderScanned={(orderId) => {
+            setQrScannedOrderId(orderId);
+            setShowQRScanner(false);
+            toast.success(
+              `Order ${orderId} scanned — select it above to update status.`,
+            );
+          }}
+        />
+        <IOSInstallBanner />
       </div>
     </div>
   );
