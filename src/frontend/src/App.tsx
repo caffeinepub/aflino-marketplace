@@ -20,6 +20,7 @@ import { I18nProvider } from "@/context/I18nContext";
 import { LanguageIconProvider } from "@/context/LanguageIconContext";
 import type { Order } from "@/context/OrderTrackingContext";
 import { OrderTrackingProvider } from "@/context/OrderTrackingContext";
+import { PWABrandingProvider } from "@/context/PWABrandingContext";
 import { ProductProvider } from "@/context/ProductContext";
 import { RemotePincodeProvider } from "@/context/RemotePincodeContext";
 import { ReviewProvider } from "@/context/ReviewContext";
@@ -240,43 +241,45 @@ function AppContent() {
 
 export default function App() {
   return (
-    <I18nProvider>
-      <LanguageIconProvider>
-        <HomepageManagerProvider>
-          <GeoLocationProvider>
-            <RoleProvider>
-              <SellerProvider>
-                <RemotePincodeProvider>
-                  <AddressProvider>
-                    <WishlistProvider>
-                      <RewardSettingsProvider>
-                        <CustomerCoinProvider>
-                          <BlacklistProvider>
-                            <ReviewProvider>
-                              <WalletProvider>
-                                <OrderTrackingProvider>
-                                  <CartProvider>
-                                    <ProductProvider>
-                                      <FlashSaleProvider>
-                                        <Toaster />
-                                        <AppContent />
-                                      </FlashSaleProvider>
-                                    </ProductProvider>
-                                  </CartProvider>
-                                </OrderTrackingProvider>
-                              </WalletProvider>
-                            </ReviewProvider>
-                          </BlacklistProvider>
-                        </CustomerCoinProvider>
-                      </RewardSettingsProvider>
-                    </WishlistProvider>
-                  </AddressProvider>
-                </RemotePincodeProvider>
-              </SellerProvider>
-            </RoleProvider>
-          </GeoLocationProvider>
-        </HomepageManagerProvider>
-      </LanguageIconProvider>
-    </I18nProvider>
+    <PWABrandingProvider>
+      <I18nProvider>
+        <LanguageIconProvider>
+          <HomepageManagerProvider>
+            <GeoLocationProvider>
+              <RoleProvider>
+                <SellerProvider>
+                  <RemotePincodeProvider>
+                    <AddressProvider>
+                      <WishlistProvider>
+                        <RewardSettingsProvider>
+                          <CustomerCoinProvider>
+                            <BlacklistProvider>
+                              <ReviewProvider>
+                                <WalletProvider>
+                                  <OrderTrackingProvider>
+                                    <CartProvider>
+                                      <ProductProvider>
+                                        <FlashSaleProvider>
+                                          <Toaster />
+                                          <AppContent />
+                                        </FlashSaleProvider>
+                                      </ProductProvider>
+                                    </CartProvider>
+                                  </OrderTrackingProvider>
+                                </WalletProvider>
+                              </ReviewProvider>
+                            </BlacklistProvider>
+                          </CustomerCoinProvider>
+                        </RewardSettingsProvider>
+                      </WishlistProvider>
+                    </AddressProvider>
+                  </RemotePincodeProvider>
+                </SellerProvider>
+              </RoleProvider>
+            </GeoLocationProvider>
+          </HomepageManagerProvider>
+        </LanguageIconProvider>
+      </I18nProvider>
+    </PWABrandingProvider>
   );
 }

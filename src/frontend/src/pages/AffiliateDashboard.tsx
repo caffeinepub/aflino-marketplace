@@ -1,3 +1,4 @@
+import InstallPWAButton from "@/components/InstallPWAButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -458,6 +459,25 @@ export default function AffiliateDashboard({ onBack, onRegisterClick }: Props) {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+            {/* Install AFLINO App */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-blue-100 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <span>📱</span> Install AFLINO App
+                </h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Manage your affiliate account faster with offline access.
+                </p>
+                <ul className="text-xs text-gray-500 mt-2 space-y-0.5">
+                  <li>✓ Works offline</li>
+                  <li>✓ Faster loading</li>
+                  <li>✓ Add to home screen</li>
+                </ul>
+              </div>
+              <div className="flex-shrink-0">
+                <InstallPWAButton fullWidth />
               </div>
             </div>
           </div>

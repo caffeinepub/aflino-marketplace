@@ -1,3 +1,4 @@
+import InstallPWAButton from "@/components/InstallPWAButton";
 import InvoiceButton from "@/components/InvoiceButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1184,6 +1185,16 @@ export default function CustomerDashboard({
               Checkout
             </button>
           )}
+          {/* Install App */}
+          <div className="mx-3 mb-4 p-3 rounded-xl border border-blue-100 bg-blue-50">
+            <p className="text-xs font-semibold text-blue-700 mb-1 flex items-center gap-1">
+              📱 AFLINO App
+            </p>
+            <p className="text-xs text-gray-500 mb-2">
+              Faster access &amp; offline browsing
+            </p>
+            <InstallPWAButton fullWidth />
+          </div>
         </nav>
       </aside>
 

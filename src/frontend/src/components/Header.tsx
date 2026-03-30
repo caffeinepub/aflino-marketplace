@@ -1,3 +1,4 @@
+import InstallPWAButton from "@/components/InstallPWAButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { useGeoLocation } from "@/context/GeoLocationContext";
@@ -436,6 +437,11 @@ export default function Header({
                   </button>
                 </div>
 
+                {/* Install PWA Button - desktop (between Language Switcher and Auth) */}
+                <div className="hidden md:flex items-center">
+                  <InstallPWAButton />
+                </div>
+
                 {/* Language Switcher — between Wishlist and Auth (Snapdeal style) */}
                 <div className="hidden md:block">
                   <LanguageSwitcher />
@@ -661,6 +667,11 @@ export default function Header({
               <SlidersHorizontal className="w-4 h-4" />
               {t("nav.filters")}
             </button>
+
+            {/* Install PWA - mobile full width */}
+            <div className="pt-1">
+              <InstallPWAButton fullWidth />
+            </div>
 
             <div className="flex gap-2 pt-1">
               <Button

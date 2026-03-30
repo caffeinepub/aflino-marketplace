@@ -12,6 +12,7 @@ import CourierSettingsSection from "@/components/admin/CourierSettingsSection";
 import GlobalPriceAdjuster from "@/components/admin/GlobalPriceAdjuster";
 import HomepageManagerTab from "@/components/admin/HomepageManagerTab";
 import LanguageIconManager from "@/components/admin/LanguageIconManager";
+import PWABrandingSection from "@/components/admin/PWABrandingSection";
 import PaymentSettingsTab from "@/components/admin/PaymentSettingsTab";
 import QRSecuritySection from "@/components/admin/QRSecuritySection";
 import { Button } from "@/components/ui/button";
@@ -1643,6 +1644,9 @@ export default function AdminDashboard() {
                   <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
                     <LanguageIconManager />
                   </div>
+
+                  {/* PWA Branding */}
+                  <PWABrandingSection />
                 </div>
               </div>
             )}

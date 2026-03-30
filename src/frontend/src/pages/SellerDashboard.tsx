@@ -1,5 +1,6 @@
 import GatepassQR from "@/components/GatepassQR";
 import IndiaPostFallbackModal from "@/components/IndiaPostFallbackModal";
+import InstallPWAButton from "@/components/InstallPWAButton";
 import InvoiceButton from "@/components/InvoiceButton";
 import {
   type AdvancedFormState,
@@ -360,6 +361,16 @@ export default function SellerDashboard({
             <BarChart3 className="w-4 h-4" />
             Analytics
           </button>
+          {/* Install App */}
+          <div className="mx-3 mb-4 p-3 rounded-xl border border-blue-100 bg-blue-50">
+            <p className="text-xs font-semibold text-blue-700 mb-1">
+              📱 AFLINO App
+            </p>
+            <p className="text-xs text-gray-500 mb-2">
+              Works offline &amp; faster
+            </p>
+            <InstallPWAButton fullWidth />
+          </div>
         </nav>
       </aside>
 
