@@ -305,9 +305,7 @@ export default function PWABrandingSection() {
                 />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  AFLINO Customer
-                </p>
+                <p className="text-sm font-semibold text-gray-900">AFLINO</p>
                 <p className="text-xs text-gray-400">Shopping app</p>
               </div>
             </div>

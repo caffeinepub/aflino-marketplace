@@ -4,6 +4,7 @@ import Hero from "@/components/Hero";
 import IOSInstallBanner from "@/components/IOSInstallBanner";
 import LeavesBackground from "@/components/LeavesBackground";
 import LocationModal from "@/components/LocationModal";
+import PWAInstallPopup from "@/components/PWAInstallPopup";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
 import { AddressProvider } from "@/context/AddressContext";
@@ -263,6 +264,7 @@ export default function App() {
                                         <FlashSaleProvider>
                                           <Toaster />
                                           <IOSInstallBanner />
+                                          <PWAInstallPopup />
                                           <AppContent />
                                         </FlashSaleProvider>
                                       </ProductProvider>

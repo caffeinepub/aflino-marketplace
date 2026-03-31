@@ -1,4 +1,5 @@
-import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { Download, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
@@ -23,6 +24,8 @@ const footerLinks = {
 };
 
 export default function Footer() {
+  const { canInstall, isIOS, triggerInstall } = usePWAInstall();
+  const installOpacity = canInstall || isIOS ? "" : " opacity-70";
   const hostname =
     typeof window !== "undefined" ? window.location.hostname : "";
 
@@ -76,6 +79,40 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+        </div>
+
+        {/* Download App section */}
+        <div
+          className="bg-gray-800 rounded-2xl p-6 mb-8 text-center"
+          data-ocid="footer.panel"
+        >
+          <p className="text-white font-semibold text-sm mb-4 tracking-wide uppercase">
+            Get the App
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={triggerInstall}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90${installOpacity}`}
+              style={{ backgroundColor: "#006AFF" }}
+              data-ocid="footer.primary_button"
+              aria-label="Download AFLINO App"
+            >
+              <Download className="w-4 h-4" />
+              Download AFLINO App
+            </button>
+            <button
+              type="button"
+              onClick={triggerInstall}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90${installOpacity}`}
+              style={{ backgroundColor: "#EC008C" }}
+              data-ocid="footer.secondary_button"
+              aria-label="Download AFLINO Seller"
+            >
+              <Download className="w-4 h-4" />
+              Download AFLINO Seller
+            </button>
+          </div>
         </div>
 
         {/* Bottom strip */}
