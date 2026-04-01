@@ -10,27 +10,48 @@ const socialLinks = [
   { Icon: Youtube, label: "Youtube" },
 ];
 
-const footerLinks = {
+const footerLinks: Record<string, { label: string; href: string }[]> = {
   Business: [
-    "Advertise with Us",
-    "Brand Solutions",
-    "Sell on AFLINO",
-    "Affiliate Program",
-    "API Partners",
+    { label: "Advertise with Us", href: "/advertise-with-us" },
+    { label: "Brand Solutions", href: "/advertise-with-us" },
+    { label: "Sell on AFLINO", href: "/" },
+    { label: "Affiliate Program", href: "/" },
+    { label: "API Partners", href: "/" },
   ],
   Explore: [
-    "Home",
-    "All Products",
-    "Categories",
-    "Top Vendors",
-    "Deals & Offers",
+    { label: "Home", href: "/" },
+    { label: "All Products", href: "/" },
+    { label: "Categories", href: "/" },
+    { label: "Top Vendors", href: "/" },
+    { label: "Deals & Offers", href: "/" },
   ],
-  Account: ["Login", "Register", "My Orders", "Wishlist", "Profile"],
-  Support: ["Help Center", "Track Order", "Returns", "Contact Us", "FAQ"],
-  Legal: ["Privacy Policy", "Terms of Service", "Cookie Policy", "Sitemap"],
+  Account: [
+    { label: "Login", href: "/" },
+    { label: "Register", href: "/" },
+    { label: "My Orders", href: "/" },
+    { label: "Wishlist", href: "/" },
+    { label: "Profile", href: "/" },
+  ],
+  Support: [
+    { label: "Help Center", href: "/" },
+    { label: "Track Order", href: "/" },
+    { label: "Returns", href: "/" },
+    { label: "Contact Us", href: "/" },
+    { label: "FAQ", href: "/" },
+  ],
+  Legal: [
+    { label: "Privacy Policy", href: "/" },
+    { label: "Terms of Service", href: "/" },
+    { label: "Cookie Policy", href: "/" },
+    { label: "Sitemap", href: "/" },
+  ],
 };
 
-export default function Footer() {
+interface FooterProps {
+  onAdvertiseClick?: () => void;
+}
+
+export default function Footer({ onAdvertiseClick }: FooterProps) {
   const { canInstall, isIOS, triggerInstall } = usePWAInstall();
   const installOpacity = canInstall || isIOS ? "" : " opacity-70";
   const hostname =
@@ -72,14 +93,24 @@ export default function Footer() {
                 {heading}
               </h4>
               <ul className="space-y-2.5">
-                {links.map((link) => (
-                  <li key={link}>
+                {links.map(({ label, href }) => (
+                  <li key={label}>
                     <a
-                      href="/"
+                      href={href}
+                      onClick={
+                        label === "Advertise with Us" ||
+                        label === "Brand Solutions"
+                          ? (e) => {
+                              e.preventDefault();
+                              if (onAdvertiseClick) onAdvertiseClick();
+                              else window.location.href = href;
+                            }
+                          : undefined
+                      }
                       className="text-sm hover:text-white transition-colors"
                       data-ocid="footer.link"
                     >
-                      {link}
+                      {label}
                     </a>
                   </li>
                 ))}

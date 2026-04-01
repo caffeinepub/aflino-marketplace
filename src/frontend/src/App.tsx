@@ -48,7 +48,7 @@ import RecentlyViewedPage from "@/pages/RecentlyViewedPage";
 import SellerDashboard from "@/pages/SellerDashboard";
 import SellerRegistrationPage from "@/pages/SellerRegistrationPage";
 import TrackOrderPage from "@/pages/TrackOrderPage";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type View =
   | "home"
@@ -75,6 +75,21 @@ function AppContent() {
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [activeBrandId, setActiveBrandId] = useState<string | null>(null);
+  const [_navKey, setNavKey] = useState(0);
+
+  // Navigate helper: updates URL and always forces re-render via navKey counter
+  const navigate = (path: string) => {
+    window.history.pushState({}, "", path);
+    setView("home");
+    setNavKey((k) => k + 1);
+  };
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handler = () => setNavKey((k) => k + 1);
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   // 30-day cookie tracking for affiliate referrals
   if (typeof window !== "undefined") {
@@ -101,9 +116,9 @@ function AppContent() {
         />
         <main className={HEADER_HEIGHT}>
           <AdvertiseWithUs
-            onBack={() => setView("home")}
-            onBrandLoginClick={() => setView("brand-login")}
-            onBrandRegisterClick={() => setView("brand-register")}
+            onBack={() => navigate("/")}
+            onBrandLoginClick={() => navigate("/brand/login")}
+            onBrandRegisterClick={() => navigate("/brand/register")}
           />
         </main>
         <Footer />
@@ -113,16 +128,16 @@ function AppContent() {
   if (window.location.pathname === "/brand/register") {
     return (
       <BrandRegister
-        onBack={() => setView("home")}
-        onLoginClick={() => setView("brand-login")}
+        onBack={() => navigate("/")}
+        onLoginClick={() => navigate("/brand/login")}
       />
     );
   }
   if (window.location.pathname === "/brand/login") {
     return (
       <BrandLogin
-        onBack={() => setView("home")}
-        onRegisterClick={() => setView("brand-register")}
+        onBack={() => navigate("/")}
+        onRegisterClick={() => navigate("/brand/register")}
         onLoginSuccess={(id) => {
           setActiveBrandId(id);
           setView("brand-dashboard");
@@ -229,8 +244,12 @@ function AppContent() {
         <main className={HEADER_HEIGHT}>
           <AdvertiseWithUs
             onBack={() => setView("home")}
-            onBrandLoginClick={() => setView("brand-login")}
-            onBrandRegisterClick={() => setView("brand-register")}
+            onBrandLoginClick={() => {
+              navigate("/brand/login");
+            }}
+            onBrandRegisterClick={() => {
+              navigate("/brand/register");
+            }}
           />
         </main>
         <Footer />
@@ -332,7 +351,7 @@ function AppContent() {
         />
         <ProductGrid onViewProduct={(id) => setCurrentProductId(id)} />
       </main>
-      <Footer />
+      <Footer onAdvertiseClick={() => navigate("/advertise-with-us")} />
       {modalShown && <LocationModal />}
     </div>
   );
@@ -362,7 +381,9 @@ export default function App() {
                                           <Toaster />
                                           <IOSInstallBanner />
                                           <PWAInstallPopup />
-                                          <AppContent />
+                                          <AffiliateProvider>
+                                            <AppContent />
+                                          </AffiliateProvider>
                                         </FlashSaleProvider>
                                       </ProductProvider>
                                     </CartProvider>
