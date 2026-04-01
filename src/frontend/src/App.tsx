@@ -32,8 +32,12 @@ import { SellerProvider } from "@/context/SellerContext";
 import { WalletProvider } from "@/context/WalletContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdvertiseWithUs from "@/pages/AdvertiseWithUs";
 import AffiliateDashboard from "@/pages/AffiliateDashboard";
 import AffiliateRegisterPage from "@/pages/AffiliateRegisterPage";
+import BrandDashboard from "@/pages/BrandDashboard";
+import BrandLogin from "@/pages/BrandLogin";
+import BrandRegister from "@/pages/BrandRegister";
 import CheckoutPage from "@/pages/CheckoutPage";
 import CustomerDashboard from "@/pages/CustomerDashboard";
 import LoginPage from "@/pages/LoginPage";
@@ -54,7 +58,11 @@ type View =
   | "checkout"
   | "order-success"
   | "affiliate-register"
-  | "affiliate";
+  | "affiliate"
+  | "advertise"
+  | "brand-register"
+  | "brand-login"
+  | "brand-dashboard";
 
 // Header is 3 rows: ~52px top bar + ~46px search + ~36px categories = 134px, use 145px for safety
 const HEADER_HEIGHT = "pt-[145px]";
@@ -66,6 +74,7 @@ function AppContent() {
   const [currentProductId, setCurrentProductId] = useState<number | null>(null);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [activeBrandId, setActiveBrandId] = useState<string | null>(null);
 
   // 30-day cookie tracking for affiliate referrals
   if (typeof window !== "undefined") {
@@ -78,6 +87,48 @@ function AppContent() {
         String(Date.now() + 30 * 24 * 60 * 60 * 1000),
       );
     }
+  }
+
+  // Handle brand portal URL paths
+  if (window.location.pathname === "/advertise-with-us") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <AdvertiseWithUs
+            onBack={() => setView("home")}
+            onBrandLoginClick={() => setView("brand-login")}
+            onBrandRegisterClick={() => setView("brand-register")}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  if (window.location.pathname === "/brand/register") {
+    return (
+      <BrandRegister
+        onBack={() => setView("home")}
+        onLoginClick={() => setView("brand-login")}
+      />
+    );
+  }
+  if (window.location.pathname === "/brand/login") {
+    return (
+      <BrandLogin
+        onBack={() => setView("home")}
+        onRegisterClick={() => setView("brand-register")}
+        onLoginSuccess={(id) => {
+          setActiveBrandId(id);
+          setView("brand-dashboard");
+        }}
+      />
+    );
   }
 
   // Handle /pickup/:token URL directly
@@ -166,6 +217,52 @@ function AppContent() {
         onLoginClick={() => setView("affiliate")}
       />
     );
+  if (view === "advertise") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <AdvertiseWithUs
+            onBack={() => setView("home")}
+            onBrandLoginClick={() => setView("brand-login")}
+            onBrandRegisterClick={() => setView("brand-register")}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  if (view === "brand-register") {
+    return (
+      <BrandRegister
+        onBack={() => setView("home")}
+        onLoginClick={() => setView("brand-login")}
+      />
+    );
+  }
+  if (view === "brand-login") {
+    return (
+      <BrandLogin
+        onBack={() => setView("home")}
+        onRegisterClick={() => setView("brand-register")}
+        onLoginSuccess={(id) => {
+          setActiveBrandId(id);
+          setView("brand-dashboard");
+        }}
+      />
+    );
+  }
+  if (view === "brand-dashboard" && activeBrandId) {
+    return (
+      <BrandDashboard brandId={activeBrandId} onBack={() => setView("home")} />
+    );
+  }
+
   if (view === "affiliate")
     return (
       <AffiliateDashboard

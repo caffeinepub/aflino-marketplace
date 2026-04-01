@@ -11,6 +11,13 @@ const socialLinks = [
 ];
 
 const footerLinks = {
+  Business: [
+    "Advertise with Us",
+    "Brand Solutions",
+    "Sell on AFLINO",
+    "Affiliate Program",
+    "API Partners",
+  ],
   Explore: [
     "Home",
     "All Products",
@@ -32,7 +39,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400" data-ocid="footer.section">
       <div className="max-w-[1200px] mx-auto px-6 pt-14 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-8 mb-10">
           {/* Brand column */}
           <div className="md:col-span-1">
             <div className="text-2xl font-bold mb-4">

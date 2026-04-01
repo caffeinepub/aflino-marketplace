@@ -1,53 +1,34 @@
-# AFLINO Marketplace — Dual-PWA Architecture
+# AFLINO Marketplace
 
 ## Current State
-- Single PWA with one manifest.json, basic service worker with cache-first strategy
-- PWABrandingSection exists in Admin — uploads icon/splash to localStorage only
-- No push notification support
-- No dual-identity PWA (Customer vs Seller)
-- No maskable icon safe-zone generation
-- Camera/QR components not yet wired
-- sw.js handles offline caching but no push event listener
+AFLINO is a full multi-vendor marketplace with Admin, Seller, Customer, and Affiliate portals. Admin Dashboard has tabs: vendors, approvals, payouts, settings, products, homepage, payment, communication, brand, reviews, analytics, languages, affiliates. Footer has Explore/Account/Support/Legal columns. No Brand (advertiser) portal, no /advertise-with-us page, no Ads Manager in Admin.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `manifest-customer.json` — AFLINO Customer PWA manifest (start_url: `/?app=customer`)
-- `manifest-seller.json` — AFLINO Seller PWA manifest (start_url: `/?app=seller`)
-- Dynamic manifest injection via React `<link rel="manifest">` based on current route/context
-- Maskable icon support: separate `purpose: "maskable"` icon entries with safe-zone padding
-- Web Push API: VAPID key generation (stored in Admin settings), subscription management, push event handler in service worker
-- Push notification triggers: New Order (Seller), Low Stock (Seller), Payout Released (Seller), Order Status Update (Customer)
-- Notification permission prompt UI — shown contextually in Seller and Customer dashboards
-- iOS Add-to-Home-Screen guidance banner (detects iOS Safari, no beforeinstallprompt)
-- Camera integration in Seller Dashboard: Quick Add Product with phone camera capture
-- QR scanner in Seller Dashboard: scan QR code to update delivery status
-- Admin > Branding: maskable icon preview showing 80% safe zone (the circle/squircle Android uses)
-- Admin > Branding: triggers manifest regeneration for both Customer and Seller manifests
-- `usePWAIdentity` hook: detects if running as Customer PWA or Seller PWA based on URL params or localStorage
-- Affiliate Share button in Customer/Affiliate portal: copy product affiliate link instantly
+- `/advertise-with-us` public page: hero section, "Why Advertise" section, Interactive Ad Slot Cards (name, dimensions, impressions), high-conversion Contact Form (Brand Name, Website, Contact Name, Email, Phone, Budget)
+- `/brand/register` page: separate brand advertiser registration (Company, Contact Name, Email, Password, Website, Industry)
+- `/brand/login` page: brand login portal, isolated from Seller/Customer auth
+- Brand Dashboard (`/brand/dashboard`): shows pending status, uploaded creatives, campaign overview
+- `AdminAdsManager.tsx` component: sub-tabs [Brand Leads, Active Campaigns, Slot Pricing]
+- "ads" tab in Admin Dashboard sidebar
+- "Ad Inquiries Email" field in Admin Settings (under Communication or Settings tab)
+- Footer "Business" column: "Advertise with Us", "Brand Solutions", "Sell on AFLINO"
 
 ### Modify
-- `sw.js` — add push event listener, notificationclick handler, update CACHE_NAME to v2
-- `PWABrandingSection.tsx` — add maskable icon preview with safe-zone circle overlay, add "Apply to Both Apps" button, generate both manifests
-- `main.tsx` — inject correct manifest link dynamically based on app identity
-- Admin Settings > Branding section — add VAPID public key field and push notification test button
-- Seller Dashboard header — add "Enable Notifications" bell button if push not yet subscribed
-- Customer Dashboard header — add "Enable Notifications" bell button if push not yet subscribed
+- `App.tsx`: add routes for `/advertise-with-us`, `/brand/register`, `/brand/login`, `/brand/dashboard`
+- `AdminDashboard.tsx`: add "ads" tab to sidebar, render AdminAdsManager for that tab, add Ad Inquiries Email field in settings
+- `Footer.tsx`: add Business column with ad/brand links
 
 ### Remove
-- Nothing removed — all existing functionality preserved
+- Nothing removed
 
 ## Implementation Plan
-1. Create `manifest-customer.json` and `manifest-seller.json` with correct start_url, name, icons (any + maskable separate entries)
-2. Create `usePWAIdentity` hook that reads `?app=customer|seller` or localStorage `aflino_pwa_identity`
-3. Update `main.tsx` to dynamically inject the correct manifest `<link>` tag
-4. Update `sw.js` to add push event listener and notificationclick handler; bump cache to v2
-5. Build `usePushNotifications` hook: requestPermission, subscribe to push, store subscription in canister or localStorage
-6. Add push notification triggers in order creation, low stock check, and payout logic (frontend simulation since backend is Motoko)
-7. Update `PWABrandingSection` with maskable icon safe-zone preview, dual-manifest regeneration
-8. Wire `camera` component into Seller Dashboard > Quick Add Product flow
-9. Wire `qr-code` scanner component into Seller Dashboard > Order Management > Scan to Update Status
-10. Add iOS detection banner for Add-to-Home-Screen prompt
-11. Add Affiliate Share button in Customer product cards and Affiliate dashboard
-12. Admin > Branding: VAPID public key input + test notification button
+1. Create `src/frontend/src/pages/AdvertiseWithUs.tsx` — public marketing page with Ad Slot Cards + Contact Form; form submissions stored in localStorage-based state and routed to admin
+2. Create `src/frontend/src/pages/BrandRegister.tsx` — registration form with brand-specific fields
+3. Create `src/frontend/src/pages/BrandLogin.tsx` — login form for brand portal
+4. Create `src/frontend/src/pages/BrandDashboard.tsx` — brand dashboard showing campaign status
+5. Create `src/frontend/src/components/admin/AdminAdsManager.tsx` — three sub-tabs: Brand Leads table, Active Campaigns manager, Slot Pricing tool
+6. Update `AdminDashboard.tsx`: add "ads" sidebar tab, render AdminAdsManager, add Ad Inquiries Email field in Settings
+7. Update `Footer.tsx`: add Business column
+8. Update `App.tsx`: add all new routes

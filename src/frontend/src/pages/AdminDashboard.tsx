@@ -4,6 +4,7 @@ import {
   SwatchImageUpload,
   initialAdvancedState,
 } from "@/components/ProductAdvancedSections";
+import AdminAdsManager from "@/components/admin/AdminAdsManager";
 import AdminCommandCenter from "@/components/admin/AdminCommandCenter";
 import AffiliateManagerTab from "@/components/admin/AffiliateManagerTab";
 import BrandSettingsTab from "@/components/admin/BrandSettingsTab";
@@ -61,6 +62,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Megaphone,
   MessageSquare,
   Package,
   Plus,
@@ -92,7 +94,8 @@ type Tab =
   | "reviews"
   | "analytics"
   | "languages"
-  | "affiliates";
+  | "affiliates"
+  | "ads";
 
 interface AdminVariantRow {
   id: string;
@@ -296,6 +299,9 @@ export default function AdminDashboard() {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
     null,
+  );
+  const [adInquiriesEmail, setAdInquiriesEmail] = useState(
+    () => localStorage.getItem("adInquiriesEmail") || "",
   );
   const [payoutAmountInput, setPayoutAmountInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
@@ -543,6 +549,19 @@ export default function AdminDashboard() {
             Affiliates
           </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab("ads")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "ads"
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="admin.ads_manager.tab"
+          >
+            <Megaphone className="w-4 h-4" />
+            Ads Manager
+          </button>
           <button
             type="button"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 text-sm hover:bg-gray-50 transition-colors"
@@ -1647,6 +1666,42 @@ export default function AdminDashboard() {
 
                   {/* PWA Branding */}
                   <PWABrandingSection />
+
+                  {/* Ad Inquiries Email */}
+                  <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+                    <h3 className="text-base font-semibold text-gray-800 mb-1">
+                      Ad Inquiries Email
+                    </h3>
+                    <p className="text-xs text-gray-400 mb-4">
+                      All contact form submissions from /advertise-with-us will
+                      be routed to this address.
+                    </p>
+                    <div className="flex gap-3">
+                      <Input
+                        type="email"
+                        value={adInquiriesEmail}
+                        onChange={(e) => setAdInquiriesEmail(e.target.value)}
+                        placeholder="ads@yourdomain.com"
+                        className="flex-1"
+                        data-ocid="admin.settings.adinquiries.input"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          localStorage.setItem(
+                            "adInquiriesEmail",
+                            adInquiriesEmail,
+                          );
+                          toast.success("Ad inquiries email saved!");
+                        }}
+                        className="text-white"
+                        style={{ backgroundColor: "#006AFF" }}
+                        data-ocid="admin.settings.adinquiries.save.button"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -2300,6 +2355,17 @@ export default function AdminDashboard() {
               className="space-y-6"
             >
               <AffiliateManagerTab />
+            </motion.div>
+          )}
+          {activeTab === "ads" && (
+            <motion.div
+              key="ads"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <AdminAdsManager />
             </motion.div>
           )}
         </main>
