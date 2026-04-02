@@ -1,5 +1,6 @@
 import AuthModal, { type AuthView } from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
+import { useDeliveryETA } from "@/context/DeliveryETAContext";
 import { useFlashSale } from "@/context/FlashSaleContext";
 import { useRole } from "@/context/RoleContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -17,6 +18,8 @@ export interface ProductData {
   category: string;
   badge?: string;
   gradient: string;
+  sellerState?: string;
+  warehousePincode?: string;
 }
 
 interface ProductCardProps {
@@ -58,6 +61,10 @@ export default function ProductCard({
   const { role } = useRole();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { getProductSale } = useFlashSale();
+  const { userPincode, getETA } = useDeliveryETA();
+  const eta = userPincode
+    ? getETA(product.sellerState, product.warehousePincode)
+    : null;
   const [authView, setAuthView] = useState<AuthView>(null);
   const [heartAnim, setHeartAnim] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -226,6 +233,13 @@ export default function ProductCard({
               </span>
             )}
           </div>
+
+          {/* Delivery ETA badge */}
+          {eta && (
+            <span className="text-[11px] text-green-600 font-medium block mb-1">
+              Get it by {eta.deliveryDateMin}
+            </span>
+          )}
 
           {/* Flash sale countdown bar */}
           {activeSale?.endTime && endMs != null && endMs > 0 && (

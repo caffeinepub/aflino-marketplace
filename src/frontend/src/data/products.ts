@@ -43,6 +43,7 @@ export interface Product {
   sizeChartImage?: string;
   sellerState?: string;
   sellerType?: "gstin" | "enrollmentId";
+  warehousePincode?: string;
   discountedPrice?: number;
   stockThreshold?: number;
 }
@@ -54,6 +55,7 @@ export const PRODUCTS: Product[] = [
     seller: "TechZone Store",
     sellerState: "Maharashtra",
     sellerType: "gstin",
+    warehousePincode: "400001",
     category: "Electronics",
     price: 2499,
     discountedPrice: 2199,
@@ -117,6 +119,7 @@ export const PRODUCTS: Product[] = [
     seller: "TechZone Store",
     sellerState: "Maharashtra",
     sellerType: "gstin",
+    warehousePincode: "400001",
     category: "Electronics",
     price: 1299,
     discountedPrice: 1099,
@@ -136,6 +139,7 @@ export const PRODUCTS: Product[] = [
     seller: "TechZone Store",
     sellerState: "Maharashtra",
     sellerType: "gstin",
+    warehousePincode: "400001",
     category: "Electronics",
     price: 1899,
     stock: 25,
@@ -153,6 +157,7 @@ export const PRODUCTS: Product[] = [
     seller: "TechZone Store",
     sellerState: "Maharashtra",
     sellerType: "gstin",
+    warehousePincode: "400001",
     category: "Electronics",
     price: 3499,
     stock: 15,
@@ -171,6 +176,7 @@ export const PRODUCTS: Product[] = [
     seller: "Fashion Hub",
     sellerState: "Karnataka",
     sellerType: "gstin",
+    warehousePincode: "560001",
     category: "Fashion",
     price: 899,
     stock: 100,

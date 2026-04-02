@@ -4,17 +4,20 @@ declare global {
   }
 }
 
+import { useCOD } from "@/context/CODContext";
 import { useCart } from "@/context/CartContext";
 import { useCustomerCoins } from "@/context/CustomerCoinContext";
 import { type Order, useOrderTracking } from "@/context/OrderTrackingContext";
 import {
   AlertCircle,
   ArrowLeft,
+  Banknote,
   CreditCard,
   Gift,
   Loader2,
   Lock,
   ShoppingBag,
+  Truck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -67,6 +70,10 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
   const [applyCoins, setApplyCoins] = useState(false);
   const { getCoinBalance, redeemCoins } = useCustomerCoins();
   const { isPincodeRemote } = useRemotePincode();
+  const { isCODAvailable, getCODFee } = useCOD();
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">(
+    "online",
+  );
   const [showIndiaPostWarning, setShowIndiaPostWarning] = useState(false);
   const [userAcceptedNonReturnable, setUserAcceptedNonReturnable] =
     useState(false);
@@ -80,7 +87,8 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
   );
   const coinDiscount =
     applyCoins && canUseCoins ? Math.min(coinBalance, subtotal) : 0;
-  const total = Math.max(0, subtotal - coinDiscount);
+  const codFeeAmount = paymentMethod === "cod" ? getCODFee(subtotal) : 0;
+  const total = Math.max(0, subtotal - coinDiscount + codFeeAmount);
 
   useEffect(() => {
     razorpayBackend
@@ -112,6 +120,48 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
     }
     if (cartItems.length === 0) {
       toast.error("Your cart is empty.");
+      return;
+    }
+
+    // COD Order flow (no payment gateway)
+    if (paymentMethod === "cod") {
+      setLoading(true);
+      const orderId = `ORD-${Date.now().toString().slice(-6)}`;
+      const today = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const productNames = cartItems.map((i) => i.productTitle).join(", ");
+      const newOrder: Order = {
+        id: orderId,
+        product: productNames,
+        date: today,
+        amount: `₹${total.toLocaleString("en-IN")}`,
+        amountRaw: total,
+        status: "Confirmed (COD)",
+        sellerEmail: "support@aflino.com",
+        sellerName: "AFLINO Store",
+        buyerName: form.name,
+        buyerAddress: `${form.address}, ${form.city} - ${form.pincode}`,
+        buyerState: form.state,
+        buyerPincode: form.pincode,
+        quantity: cartItems.reduce((s, i) => s + i.quantity, 0),
+        unitPrice: total,
+        gstRate: 18,
+        hsnCode: "8517",
+        discount: 0,
+        nonReturnable: isPincodeRemote(form.pincode),
+        indiaPostOrder: isPincodeRemote(form.pincode),
+      };
+      addOrder(newOrder);
+      clearCart();
+      if (applyCoins && canUseCoins && coinDiscount > 0) {
+        redeemCoins(userId, coinDiscount, orderId);
+      }
+      logWhatsApp("order_placed", form.phone, orderId);
+      setLoading(false);
+      onSuccess(newOrder);
       return;
     }
 
@@ -391,6 +441,12 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
                 <span>-₹{coinDiscount.toLocaleString("en-IN")}</span>
               </div>
             )}
+            {codFeeAmount > 0 && (
+              <div className="flex justify-between text-sm text-orange-600">
+                <span>COD Handling Fee</span>
+                <span>+₹{codFeeAmount}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-1 border-t border-gray-100">
               <span className="font-bold text-gray-900">Grand Total</span>
               <span className="font-bold text-lg" style={{ color: "#006AFF" }}>
@@ -653,22 +709,94 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
           </div>
         </div>
 
-        {/* Payment note */}
-        <div className="bg-blue-50 rounded-xl p-4 flex items-start gap-3">
-          <CreditCard
-            className="w-5 h-5 mt-0.5 shrink-0"
-            style={{ color: "#006AFF" }}
-          />
-          <div>
-            <p className="text-sm font-semibold text-blue-800">
-              Secure Payment via Razorpay
-            </p>
-            <p className="text-xs text-blue-600 mt-0.5">
-              Supports UPI, Cards, Net Banking, Wallets. 100% secure &amp;
-              encrypted.
-            </p>
-          </div>
+        {/* Payment Method Selection */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h3 className="font-bold text-gray-800">Payment Method</h3>
+
+          {/* Online Payment */}
+          <label
+            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "online" ? "border-[#006AFF] bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+            data-ocid="checkout.online_payment.toggle"
+          >
+            <input
+              type="radio"
+              name="payment"
+              value="online"
+              checked={paymentMethod === "online"}
+              onChange={() => setPaymentMethod("online")}
+              className="accent-[#006AFF]"
+            />
+            <CreditCard className="w-4 h-4 text-gray-600 shrink-0" />
+            <div className="flex-1">
+              <span className="font-medium text-sm text-gray-800">
+                Online Payment
+              </span>
+              <span className="text-xs text-gray-400 ml-2">
+                (UPI / Card / Net Banking)
+              </span>
+            </div>
+            {getCODFee(subtotal) > 0 && (
+              <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                SAVE ₹{getCODFee(subtotal)}
+              </span>
+            )}
+          </label>
+
+          {/* COD Option */}
+          {isCODAvailable(subtotal) && (
+            <label
+              className={`flex flex-col gap-1 p-3 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "cod" ? "border-orange-400 bg-orange-50" : "border-gray-200 hover:border-gray-300"}`}
+              data-ocid="checkout.cod_payment.toggle"
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="cod"
+                  checked={paymentMethod === "cod"}
+                  onChange={() => setPaymentMethod("cod")}
+                  className="accent-orange-500"
+                />
+                <Banknote className="w-4 h-4 text-orange-600 shrink-0" />
+                <span className="font-medium text-sm text-gray-800">
+                  Cash on Delivery
+                </span>
+                {codFeeAmount > 0 ? (
+                  <span className="text-xs text-orange-600 font-semibold ml-auto">
+                    +₹{codFeeAmount} fee
+                  </span>
+                ) : (
+                  <span className="text-xs text-green-600 font-semibold ml-auto">
+                    FREE COD
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 ml-6">
+                Why this fee? To ensure safe and verified delivery to your
+                doorstep.
+              </p>
+            </label>
+          )}
         </div>
+
+        {/* Online payment note (only when online selected) */}
+        {paymentMethod === "online" && (
+          <div className="bg-blue-50 rounded-xl p-4 flex items-start gap-3">
+            <CreditCard
+              className="w-5 h-5 mt-0.5 shrink-0"
+              style={{ color: "#006AFF" }}
+            />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">
+                Secure Payment via Razorpay
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                Supports UPI, Cards, Net Banking, Wallets. 100% secure &amp;
+                encrypted.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Place Order Button */}
         <button
@@ -676,12 +804,23 @@ export default function CheckoutPage({ onBack, onSuccess }: Props) {
           onClick={handlePlaceOrder}
           disabled={loading}
           className="w-full py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform disabled:opacity-70"
-          style={{ background: loading ? "#99C2FF" : "#006AFF" }}
+          style={{
+            background: loading
+              ? "#99C2FF"
+              : paymentMethod === "cod"
+                ? "#f97316"
+                : "#006AFF",
+          }}
           data-ocid="checkout.submit_button"
         >
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" /> Processing...
+            </>
+          ) : paymentMethod === "cod" ? (
+            <>
+              <Truck className="w-5 h-5" />
+              <span>Place COD Order · ₹{total.toLocaleString("en-IN")}</span>
             </>
           ) : (
             <>

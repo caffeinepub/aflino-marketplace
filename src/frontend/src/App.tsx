@@ -1,3 +1,4 @@
+import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -10,8 +11,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { AddressProvider } from "@/context/AddressContext";
 import { AffiliateProvider } from "@/context/AffiliateContext";
 import { BlacklistProvider } from "@/context/BlacklistContext";
+import { CODProvider } from "@/context/CODContext";
 import { CartProvider } from "@/context/CartContext";
 import { CustomerCoinProvider } from "@/context/CustomerCoinContext";
+import { DeliveryETAProvider } from "@/context/DeliveryETAContext";
 import { FlashSaleProvider } from "@/context/FlashSaleContext";
 import {
   GeoLocationProvider,
@@ -68,7 +71,10 @@ type View =
   | "wishlist"
   | "brand-register"
   | "brand-login"
-  | "brand-dashboard";
+  | "brand-dashboard"
+  | "categories"
+  | "orders"
+  | "account";
 
 // Header is 3 rows: ~52px top bar + ~46px search + ~36px categories = 134px, use 145px for safety
 const HEADER_HEIGHT = "pt-[145px]";
@@ -110,6 +116,9 @@ function AppContent() {
       advertise: "advertise",
       "api-partners": "api-partners",
       wishlist: "wishlist",
+      categories: "categories",
+      orders: "orders",
+      account: "account",
       "brand-register": "brand-register",
       "brand-login": "brand-login",
     };
@@ -521,6 +530,51 @@ function AppContent() {
     );
   }
 
+  // Categories view -> redirect to home (scroll to categories)
+  if (view === "categories") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
+        />
+        <main className={`${HEADER_HEIGHT} pb-16 md:pb-0`}>
+          <ProductGrid onViewProduct={(id) => setCurrentProductId(id)} />
+        </main>
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
+        {modalShown && <LocationModal />}
+      </div>
+    );
+  }
+
+  // Orders view -> show CustomerDashboard
+  if (view === "orders" && role === "customer") {
+    return (
+      <CustomerDashboard
+        onCheckout={() => setView("checkout")}
+        onTrackOrder={(id) => setTrackingOrderId(id)}
+        onNavigateToProduct={(id) => setCurrentProductId(id)}
+      />
+    );
+  }
+
+  // Account view -> show CustomerDashboard
+  if (view === "account" && role === "customer") {
+    return (
+      <CustomerDashboard
+        onCheckout={() => setView("checkout")}
+        onTrackOrder={(id) => setTrackingOrderId(id)}
+        onNavigateToProduct={(id) => setCurrentProductId(id)}
+      />
+    );
+  }
+
   // ─── Home (default) ───
   return (
     <div className="min-h-screen bg-white">
@@ -531,7 +585,7 @@ function AppContent() {
         onAffiliateClick={() => setView("affiliate-register")}
         onWishlistClick={() => navigateTo("wishlist")}
       />
-      <main className={HEADER_HEIGHT}>
+      <main className={`${HEADER_HEIGHT} pb-16 md:pb-0`}>
         <Hero
           onShopClick={() => setView("login")}
           onViewAll={() => setView("history")}
@@ -544,6 +598,12 @@ function AppContent() {
         onAdvertiseClick={() => navigate("/advertise-with-us")}
       />
       {modalShown && <LocationModal />}
+      <BottomNav
+        currentView={view}
+        onNavigate={(v) => navigateTo(v as View)}
+        onLoginRequired={() => setView("login")}
+        isLoggedIn={!!role}
+      />
     </div>
   );
 }
@@ -567,16 +627,20 @@ export default function App() {
                                 <WalletProvider>
                                   <OrderTrackingProvider>
                                     <CartProvider>
-                                      <ProductProvider>
-                                        <FlashSaleProvider>
-                                          <Toaster />
-                                          <IOSInstallBanner />
-                                          <PWAInstallPopup />
-                                          <AffiliateProvider>
-                                            <AppContent />
-                                          </AffiliateProvider>
-                                        </FlashSaleProvider>
-                                      </ProductProvider>
+                                      <DeliveryETAProvider>
+                                        <CODProvider>
+                                          <ProductProvider>
+                                            <FlashSaleProvider>
+                                              <Toaster />
+                                              <IOSInstallBanner />
+                                              <PWAInstallPopup />
+                                              <AffiliateProvider>
+                                                <AppContent />
+                                              </AffiliateProvider>
+                                            </FlashSaleProvider>
+                                          </ProductProvider>
+                                        </CODProvider>
+                                      </DeliveryETAProvider>
                                     </CartProvider>
                                   </OrderTrackingProvider>
                                 </WalletProvider>

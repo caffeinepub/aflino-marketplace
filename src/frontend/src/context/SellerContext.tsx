@@ -12,6 +12,7 @@ export interface PendingSeller {
   submittedAt: string;
   sellerType: "gstin" | "enrollmentId";
   enrollmentId?: string;
+  warehousePincode?: string;
 }
 
 interface SellerContextValue {
@@ -61,6 +62,7 @@ const INITIAL_APPROVED_SELLERS: PendingSeller[] = [
     state: "Maharashtra",
     submittedAt: "2026-01-01T00:00:00Z",
     sellerType: "gstin",
+    warehousePincode: "400001",
   },
   {
     id: "seller-2",
@@ -73,6 +75,7 @@ const INITIAL_APPROVED_SELLERS: PendingSeller[] = [
     state: "Karnataka",
     submittedAt: "2026-01-02T00:00:00Z",
     sellerType: "gstin",
+    warehousePincode: "560001",
   },
   {
     id: "seller-3",
@@ -85,6 +88,7 @@ const INITIAL_APPROVED_SELLERS: PendingSeller[] = [
     state: "Delhi",
     submittedAt: "2026-01-03T00:00:00Z",
     sellerType: "gstin",
+    warehousePincode: "110001",
   },
   {
     id: "seller-4",

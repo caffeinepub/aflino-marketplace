@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useCOD } from "@/context/CODContext";
 import {
   type OrderStatus,
   useOrderTracking,
@@ -109,6 +110,7 @@ const statusPillStyle: Record<OrderStatus, string> = {
   "Out for Delivery": "bg-orange-100 text-orange-700",
   Delivered: "bg-emerald-100 text-emerald-700",
   "Paid & Processing": "bg-blue-100 text-blue-700",
+  "Confirmed (COD)": "bg-amber-100 text-amber-700",
   "Refund Initiated": "bg-red-100 text-red-700",
 };
 
@@ -157,6 +159,11 @@ export default function SellerDashboard({
   const [, setQrScannedOrderId] = useState<string | null>(null);
   const [upgradeGstin, setUpgradeGstin] = useState("");
   const [upgradePan, setUpgradePan] = useState("");
+  const [warehousePincode, setWarehousePincode] = useState(
+    sellerProfile?.warehousePincode ?? "",
+  );
+  const { toggleSellerCODOptOut, sellerCODOptOut } = useCOD();
+  const acceptsCOD = !sellerCODOptOut.includes(sellerEmail);
 
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("");
@@ -925,6 +932,63 @@ export default function SellerDashboard({
                     >
                       Upgrade
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Seller Settings: Warehouse Pincode + COD ── */}
+            {activeTab === "upload" && approved && (
+              <div
+                className="mb-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                data-ocid="seller.settings.panel"
+              >
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span style={{ color: "#006AFF" }}>⚙️</span> Store Settings
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Warehouse Pincode */}
+                  <div>
+                    <label
+                      htmlFor="seller-warehouse-pincode"
+                      className="text-xs font-medium text-gray-600 block mb-1"
+                    >
+                      Warehouse Pincode{" "}
+                      <span className="text-gray-400">(for delivery ETA)</span>
+                    </label>
+                    <input
+                      id="seller-warehouse-pincode"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="e.g. 400001"
+                      value={warehousePincode}
+                      onChange={(e) =>
+                        setWarehousePincode(e.target.value.replace(/\D/g, ""))
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-0.5 focus:outline-none focus:border-blue-400"
+                      data-ocid="seller.warehouse_pincode.input"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Used to calculate delivery date for customers
+                    </p>
+                  </div>
+
+                  {/* COD Toggle */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg self-start mt-1">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">
+                        Accept COD Orders
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Disable to reject Cash on Delivery for your products
+                      </p>
+                    </div>
+                    <Switch
+                      checked={acceptsCOD}
+                      onCheckedChange={() => toggleSellerCODOptOut(sellerEmail)}
+                      data-ocid="seller.cod_toggle.switch"
+                    />
                   </div>
                 </div>
               </div>

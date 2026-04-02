@@ -8,6 +8,7 @@ export type OrderStatus =
   | "Out for Delivery"
   | "Delivered"
   | "Paid & Processing"
+  | "Confirmed (COD)"
   | "Refund Initiated";
 
 export interface Order {

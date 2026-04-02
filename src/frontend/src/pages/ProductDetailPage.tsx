@@ -1,4 +1,5 @@
 import AuthModal, { type AuthView } from "@/components/AuthModal";
+import DeliveryETAWidget from "@/components/DeliveryETAWidget";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -1452,6 +1453,12 @@ export default function ProductDetailPage({
               </div>
             </div>
           </div>
+
+          {/* ── Delivery ETA Widget ── */}
+          <DeliveryETAWidget
+            sellerState={product.sellerState}
+            sellerPincode={product.warehousePincode}
+          />
 
           {/* u2014u2014 Deliver To Widget u2014u2014 */}
           <DeliverToWidget />
