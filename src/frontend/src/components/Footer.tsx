@@ -10,52 +10,82 @@ const socialLinks = [
   { Icon: Youtube, label: "Youtube" },
 ];
 
-const footerLinks: Record<string, { label: string; href: string }[]> = {
-  Business: [
-    { label: "Advertise with Us", href: "/advertise-with-us" },
-    { label: "Brand Solutions", href: "/advertise-with-us" },
-    { label: "Sell on AFLINO", href: "/" },
-    { label: "Affiliate Program", href: "/" },
-    { label: "API Partners", href: "/" },
-  ],
-  Explore: [
-    { label: "Home", href: "/" },
-    { label: "All Products", href: "/" },
-    { label: "Categories", href: "/" },
-    { label: "Top Vendors", href: "/" },
-    { label: "Deals & Offers", href: "/" },
-  ],
-  Account: [
-    { label: "Login", href: "/" },
-    { label: "Register", href: "/" },
-    { label: "My Orders", href: "/" },
-    { label: "Wishlist", href: "/" },
-    { label: "Profile", href: "/" },
-  ],
-  Support: [
-    { label: "Help Center", href: "/" },
-    { label: "Track Order", href: "/" },
-    { label: "Returns", href: "/" },
-    { label: "Contact Us", href: "/" },
-    { label: "FAQ", href: "/" },
-  ],
-  Legal: [
-    { label: "Privacy Policy", href: "/" },
-    { label: "Terms of Service", href: "/" },
-    { label: "Cookie Policy", href: "/" },
-    { label: "Sitemap", href: "/" },
-  ],
-};
+interface FooterNavItem {
+  label: string;
+  action: "href" | "navigate";
+  href?: string;
+  view?: string;
+}
+
+type FooterNavSection = Record<string, FooterNavItem[]>;
 
 interface FooterProps {
+  onNavigate?: (view: string) => void;
   onAdvertiseClick?: () => void;
 }
 
-export default function Footer({ onAdvertiseClick }: FooterProps) {
+export default function Footer({ onNavigate, onAdvertiseClick }: FooterProps) {
   const { canInstall, isIOS, triggerInstall } = usePWAInstall();
   const installOpacity = canInstall || isIOS ? "" : " opacity-70";
   const hostname =
     typeof window !== "undefined" ? window.location.hostname : "";
+
+  const footerSections: FooterNavSection = {
+    Business: [
+      { label: "Sell on AFLINO", action: "navigate", view: "seller-register" },
+      {
+        label: "Affiliate Program",
+        action: "navigate",
+        view: "affiliate-landing",
+      },
+      { label: "Advertise with Us", action: "navigate", view: "advertise" },
+      { label: "Brand Solutions", action: "navigate", view: "advertise" },
+      { label: "API Partners", action: "navigate", view: "api-partners" },
+    ],
+    Explore: [
+      { label: "Home", action: "navigate", view: "home" },
+      { label: "All Products", action: "navigate", view: "home" },
+      { label: "Categories", action: "navigate", view: "home" },
+      { label: "Top Vendors", action: "navigate", view: "home" },
+      { label: "Deals & Offers", action: "navigate", view: "home" },
+    ],
+    Account: [
+      { label: "Login", action: "navigate", view: "login" },
+      { label: "Register", action: "navigate", view: "seller-register" },
+      { label: "My Orders", action: "navigate", view: "home" },
+      { label: "Wishlist", action: "navigate", view: "wishlist" },
+      { label: "Profile", action: "navigate", view: "home" },
+    ],
+    Support: [
+      { label: "Help Center", action: "navigate", view: "home" },
+      { label: "Track Order", action: "navigate", view: "home" },
+      { label: "Returns", action: "navigate", view: "home" },
+      { label: "Contact Us", action: "navigate", view: "home" },
+      { label: "FAQ", action: "navigate", view: "home" },
+    ],
+    Legal: [
+      { label: "Privacy Policy", action: "navigate", view: "home" },
+      { label: "Terms of Service", action: "navigate", view: "home" },
+      { label: "Cookie Policy", action: "navigate", view: "home" },
+      { label: "Sitemap", action: "navigate", view: "home" },
+    ],
+  };
+
+  function handleLinkClick(item: FooterNavItem, e: React.MouseEvent) {
+    e.preventDefault();
+    if (
+      item.label === "Advertise with Us" ||
+      item.label === "Brand Solutions"
+    ) {
+      if (onAdvertiseClick) {
+        onAdvertiseClick();
+        return;
+      }
+    }
+    if (onNavigate && item.view) {
+      onNavigate(item.view);
+    }
+  }
 
   return (
     <footer className="bg-gray-900 text-gray-400" data-ocid="footer.section">
@@ -87,30 +117,21 @@ export default function Footer({ onAdvertiseClick }: FooterProps) {
           </div>
 
           {/* Link columns */}
-          {Object.entries(footerLinks).map(([heading, links]) => (
+          {Object.entries(footerSections).map(([heading, links]) => (
             <div key={heading}>
               <h4 className="text-white font-semibold text-sm mb-4">
                 {heading}
               </h4>
               <ul className="space-y-2.5">
-                {links.map(({ label, href }) => (
-                  <li key={label}>
+                {links.map((item) => (
+                  <li key={item.label}>
                     <a
-                      href={href}
-                      onClick={
-                        label === "Advertise with Us" ||
-                        label === "Brand Solutions"
-                          ? (e) => {
-                              e.preventDefault();
-                              if (onAdvertiseClick) onAdvertiseClick();
-                              else window.location.href = href;
-                            }
-                          : undefined
-                      }
-                      className="text-sm hover:text-white transition-colors"
+                      href="/"
+                      onClick={(e) => handleLinkClick(item, e)}
+                      className="text-sm hover:text-white transition-colors cursor-pointer"
                       data-ocid="footer.link"
                     >
-                      {label}
+                      {item.label}
                     </a>
                   </li>
                 ))}

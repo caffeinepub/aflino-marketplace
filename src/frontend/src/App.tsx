@@ -34,7 +34,9 @@ import { WishlistProvider } from "@/context/WishlistContext";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdvertiseWithUs from "@/pages/AdvertiseWithUs";
 import AffiliateDashboard from "@/pages/AffiliateDashboard";
+import AffiliateLandingPage from "@/pages/AffiliateLandingPage";
 import AffiliateRegisterPage from "@/pages/AffiliateRegisterPage";
+import ApiPartnersPage from "@/pages/ApiPartnersPage";
 import BrandDashboard from "@/pages/BrandDashboard";
 import BrandLogin from "@/pages/BrandLogin";
 import BrandRegister from "@/pages/BrandRegister";
@@ -48,6 +50,7 @@ import RecentlyViewedPage from "@/pages/RecentlyViewedPage";
 import SellerDashboard from "@/pages/SellerDashboard";
 import SellerRegistrationPage from "@/pages/SellerRegistrationPage";
 import TrackOrderPage from "@/pages/TrackOrderPage";
+import WishlistPage from "@/pages/WishlistPage";
 import { useEffect, useState } from "react";
 
 type View =
@@ -59,7 +62,10 @@ type View =
   | "order-success"
   | "affiliate-register"
   | "affiliate"
+  | "affiliate-landing"
   | "advertise"
+  | "api-partners"
+  | "wishlist"
   | "brand-register"
   | "brand-login"
   | "brand-dashboard";
@@ -84,6 +90,33 @@ function AppContent() {
     setNavKey((k) => k + 1);
   };
 
+  // Navigate to internal view without URL change
+  const navigateTo = (targetView: View) => {
+    setCurrentProductId(null);
+    setView(targetView);
+    setNavKey((k) => k + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Handle footer navigation events (string view name)
+  const handleFooterNavigate = (viewName: string) => {
+    // Map special string views to typed views
+    const viewMap: Record<string, View> = {
+      home: "home",
+      login: "login",
+      "seller-register": "seller-register",
+      affiliate: "affiliate",
+      "affiliate-landing": "affiliate-landing",
+      advertise: "advertise",
+      "api-partners": "api-partners",
+      wishlist: "wishlist",
+      "brand-register": "brand-register",
+      "brand-login": "brand-login",
+    };
+    const mapped = viewMap[viewName];
+    if (mapped) navigateTo(mapped);
+  };
+
   // Handle browser back/forward buttons
   useEffect(() => {
     const handler = () => setNavKey((k) => k + 1);
@@ -104,7 +137,8 @@ function AppContent() {
     }
   }
 
-  // Handle brand portal URL paths
+  // ─── URL-based routing (ABOVE wildcard logic) ───
+  // /advertise-with-us
   if (window.location.pathname === "/advertise-with-us") {
     return (
       <div className="min-h-screen bg-white">
@@ -113,6 +147,7 @@ function AppContent() {
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
           onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
         />
         <main className={HEADER_HEIGHT}>
           <AdvertiseWithUs
@@ -121,10 +156,84 @@ function AppContent() {
             onBrandRegisterClick={() => navigate("/brand/register")}
           />
         </main>
-        <Footer />
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
       </div>
     );
   }
+
+  // /seller/register or /seller-onboarding
+  if (
+    window.location.pathname === "/seller/register" ||
+    window.location.pathname === "/seller-onboarding"
+  ) {
+    return <SellerRegistrationPage onBack={() => navigate("/")} />;
+  }
+
+  // /affiliate
+  if (window.location.pathname === "/affiliate") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <AffiliateLandingPage
+            onRegisterClick={() => navigate("/affiliate-register")}
+            onLoginClick={() => navigateTo("affiliate")}
+            onBack={() => navigate("/")}
+          />
+        </main>
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
+      </div>
+    );
+  }
+
+  // /api-partners
+  if (window.location.pathname === "/api-partners") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <ApiPartnersPage onBack={() => navigate("/")} />
+        </main>
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
+      </div>
+    );
+  }
+
+  // /wishlist
+  if (window.location.pathname === "/wishlist") {
+    return (
+      <WishlistPage
+        onBack={() => navigate("/")}
+        onViewProduct={(id) => {
+          navigate("/");
+          setCurrentProductId(id);
+        }}
+        onLoginRequired={() => navigateTo("login")}
+      />
+    );
+  }
+
   if (window.location.pathname === "/brand/register") {
     return (
       <BrandRegister
@@ -158,6 +267,8 @@ function AppContent() {
       <TrackOrderPage orderId={orderId} onBack={() => window.history.back()} />
     );
   }
+
+  // ─── View-based routing ───
 
   // Checkout view - accessible to logged-in customers
   if (view === "checkout") {
@@ -232,6 +343,69 @@ function AppContent() {
         onLoginClick={() => setView("affiliate")}
       />
     );
+
+  // Affiliate landing page (public, shows benefits + CTA)
+  if (view === "affiliate-landing") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <AffiliateLandingPage
+            onRegisterClick={() => setView("affiliate-register")}
+            onLoginClick={() => setView("affiliate")}
+            onBack={() => setView("home")}
+          />
+        </main>
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
+      </div>
+    );
+  }
+
+  // API Partners page
+  if (view === "api-partners") {
+    return (
+      <div className="min-h-screen bg-white">
+        <LeavesBackground />
+        <Header
+          onLoginClick={() => setView("login")}
+          onRegisterClick={() => setView("seller-register")}
+          onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
+        />
+        <main className={HEADER_HEIGHT}>
+          <ApiPartnersPage onBack={() => setView("home")} />
+        </main>
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
+      </div>
+    );
+  }
+
+  // Wishlist page
+  if (view === "wishlist") {
+    return (
+      <WishlistPage
+        onBack={() => setView("home")}
+        onViewProduct={(id) => {
+          setView("home");
+          setCurrentProductId(id);
+        }}
+        onLoginRequired={() => setView("login")}
+      />
+    );
+  }
+
   if (view === "advertise") {
     return (
       <div className="min-h-screen bg-white">
@@ -240,6 +414,7 @@ function AppContent() {
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
           onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
         />
         <main className={HEADER_HEIGHT}>
           <AdvertiseWithUs
@@ -252,7 +427,10 @@ function AppContent() {
             }}
           />
         </main>
-        <Footer />
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
       </div>
     );
   }
@@ -298,6 +476,7 @@ function AppContent() {
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
           onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
         />
         <main className={HEADER_HEIGHT}>
           <RecentlyViewedPage
@@ -308,7 +487,10 @@ function AppContent() {
             }}
           />
         </main>
-        <Footer />
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
         {modalShown && <LocationModal />}
       </div>
     );
@@ -321,6 +503,7 @@ function AppContent() {
           onLoginClick={() => setView("login")}
           onRegisterClick={() => setView("seller-register")}
           onAffiliateClick={() => setView("affiliate-register")}
+          onWishlistClick={() => navigateTo("wishlist")}
         />
         <main className={HEADER_HEIGHT}>
           <ProductDetailPage
@@ -329,12 +512,16 @@ function AppContent() {
             onNavigateToProduct={(id) => setCurrentProductId(id)}
           />
         </main>
-        <Footer />
+        <Footer
+          onNavigate={handleFooterNavigate}
+          onAdvertiseClick={() => navigate("/advertise-with-us")}
+        />
         {modalShown && <LocationModal />}
       </div>
     );
   }
 
+  // ─── Home (default) ───
   return (
     <div className="min-h-screen bg-white">
       <LeavesBackground />
@@ -342,6 +529,7 @@ function AppContent() {
         onLoginClick={() => setView("login")}
         onRegisterClick={() => setView("seller-register")}
         onAffiliateClick={() => setView("affiliate-register")}
+        onWishlistClick={() => navigateTo("wishlist")}
       />
       <main className={HEADER_HEIGHT}>
         <Hero
@@ -351,7 +539,10 @@ function AppContent() {
         />
         <ProductGrid onViewProduct={(id) => setCurrentProductId(id)} />
       </main>
-      <Footer onAdvertiseClick={() => navigate("/advertise-with-us")} />
+      <Footer
+        onNavigate={handleFooterNavigate}
+        onAdvertiseClick={() => navigate("/advertise-with-us")}
+      />
       {modalShown && <LocationModal />}
     </div>
   );

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useHomepageManager } from "@/context/HomepageManagerContext";
 import { useTranslation } from "@/context/I18nContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { PRODUCTS } from "@/data/products";
 import {
   Camera,
@@ -25,6 +26,7 @@ interface HeaderProps {
   onLoginClick: () => void;
   onRegisterClick: () => void;
   onAffiliateClick?: () => void;
+  onWishlistClick?: () => void;
 }
 
 const navLinks = [
@@ -335,8 +337,10 @@ export default function Header({
   onLoginClick,
   onRegisterClick,
   onAffiliateClick,
+  onWishlistClick,
 }: HeaderProps) {
   const { t } = useTranslation();
+  const { wishlistCount } = useWishlist();
   const [activeLink, setActiveLink] = useState("nav.home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -430,10 +434,20 @@ export default function Header({
                 <div className="hidden md:flex items-center">
                   <button
                     type="button"
-                    className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
+                    onClick={onWishlistClick}
+                    className="relative p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50"
                     aria-label="Wishlist"
+                    data-ocid="header.wishlist.button"
                   >
                     <Heart className="w-5 h-5" />
+                    {wishlistCount > 0 && (
+                      <span
+                        className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                        style={{ backgroundColor: "#EC008C" }}
+                      >
+                        {wishlistCount > 9 ? "9+" : wishlistCount}
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -485,10 +499,20 @@ export default function Header({
                 <div className="flex md:hidden items-center gap-1">
                   <button
                     type="button"
-                    className="p-1.5 text-gray-500"
+                    onClick={onWishlistClick}
+                    className="relative p-1.5 text-gray-500"
                     aria-label="Wishlist"
+                    data-ocid="header.wishlist.mobile.button"
                   >
                     <Heart className="w-5 h-5" />
+                    {wishlistCount > 0 && (
+                      <span
+                        className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                        style={{ backgroundColor: "#EC008C" }}
+                      >
+                        {wishlistCount > 9 ? "9+" : wishlistCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"

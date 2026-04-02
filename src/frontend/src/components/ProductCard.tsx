@@ -59,6 +59,7 @@ export default function ProductCard({
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { getProductSale } = useFlashSale();
   const [authView, setAuthView] = useState<AuthView>(null);
+  const [heartAnim, setHeartAnim] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const activeSale = getProductSale(product.id);
@@ -74,13 +75,20 @@ export default function ProductCard({
   }, [activeSale?.endTime]);
 
   function handleHeartClick() {
-    toggleWishlist(product.id, isLoggedIn, () => {
-      if (onLoginRequired) {
-        onLoginRequired();
-      } else {
-        setAuthView("login");
-      }
-    });
+    setHeartAnim(true);
+    setTimeout(() => setHeartAnim(false), 400);
+    toggleWishlist(
+      product.id,
+      isLoggedIn,
+      () => {
+        if (onLoginRequired) {
+          onLoginRequired();
+        } else {
+          setAuthView("login");
+        }
+      },
+      product.price,
+    );
   }
 
   function handleAffiliateShare(e: React.MouseEvent) {
@@ -165,6 +173,10 @@ export default function ProductCard({
             onClick={handleHeartClick}
             className="absolute bottom-2.5 right-2.5 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"
             data-ocid={`${scope}.toggle.${index}`}
+            style={{
+              transform: heartAnim ? "scale(1.35)" : "scale(1)",
+              transition: "transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
           >
             <Heart
               className="w-4 h-4"

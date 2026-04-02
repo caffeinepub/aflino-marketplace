@@ -1,93 +1,154 @@
 import type React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { logEmail, logWhatsApp } from "../utils/communicationLogger";
+
+interface WishlistItem {
+  productId: number;
+  addedAt: number; // timestamp for sorting
+  priceAtAdd?: number; // for price-drop detection
+}
 
 interface WishlistContextType {
   wishlistIds: number[];
+  wishlistCount: number;
   priceDroppedIds: Set<number>;
-  addToWishlist: (productId: number) => void;
+  addToWishlist: (productId: number, price?: number) => void;
   removeFromWishlist: (productId: number) => void;
   isWishlisted: (productId: number) => boolean;
   toggleWishlist: (
     productId: number,
     isLoggedIn: boolean,
     onLoginRequired: () => void,
+    price?: number,
   ) => void;
   triggerPriceDropAlerts: (
     productId: number,
     productTitle: string,
     newPrice: number,
   ) => void;
+  syncGuestWishlist: () => void;
 }
+
+const STORAGE_KEY = "aflino_wishlist_v2";
+const GUEST_KEY = "aflino_wishlist_guest";
 
 const WishlistContext = createContext<WishlistContextType>({
   wishlistIds: [],
+  wishlistCount: 0,
   priceDroppedIds: new Set(),
   addToWishlist: () => {},
   removeFromWishlist: () => {},
   isWishlisted: () => false,
   toggleWishlist: () => {},
   triggerPriceDropAlerts: () => {},
+  syncGuestWishlist: () => {},
 });
 
-function loadFromStorage(): number[] {
+function loadItems(): WishlistItem[] {
   try {
-    const stored = localStorage.getItem("aflino_wishlist");
-    return stored ? JSON.parse(stored) : [];
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored) as WishlistItem[];
+    // Migrate from old flat array format
+    const old = localStorage.getItem("aflino_wishlist");
+    if (old) {
+      const ids = JSON.parse(old) as number[];
+      return ids.map((id) => ({ productId: id, addedAt: Date.now() }));
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-function saveToStorage(ids: number[]) {
+function saveItems(items: WishlistItem[]) {
   try {
-    localStorage.setItem("aflino_wishlist", JSON.stringify(ids));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   } catch {
     // ignore
   }
 }
 
+function saveGuestItems(items: WishlistItem[]) {
+  try {
+    localStorage.setItem(GUEST_KEY, JSON.stringify(items));
+  } catch {
+    // ignore
+  }
+}
+
+function loadGuestItems(): WishlistItem[] {
+  try {
+    const stored = localStorage.getItem(GUEST_KEY);
+    return stored ? (JSON.parse(stored) as WishlistItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [wishlistIds, setWishlistIds] = useState<number[]>(loadFromStorage);
+  const [items, setItems] = useState<WishlistItem[]>(loadItems);
   const [priceDroppedIds, setPriceDroppedIds] = useState<Set<number>>(
     new Set(),
   );
 
-  function addToWishlist(productId: number) {
-    setWishlistIds((prev) => {
-      if (prev.includes(productId)) return prev;
-      const next = [...prev, productId];
-      saveToStorage(next);
-      return next;
+  const wishlistIds = items.map((i) => i.productId);
+  const wishlistCount = items.length;
+
+  // Persist on change
+  useEffect(() => {
+    saveItems(items);
+  }, [items]);
+
+  function addToWishlist(productId: number, price?: number) {
+    setItems((prev) => {
+      if (prev.some((i) => i.productId === productId)) return prev;
+      return [...prev, { productId, addedAt: Date.now(), priceAtAdd: price }];
     });
   }
 
   function removeFromWishlist(productId: number) {
-    setWishlistIds((prev) => {
-      const next = prev.filter((id) => id !== productId);
-      saveToStorage(next);
-      return next;
-    });
+    setItems((prev) => prev.filter((i) => i.productId !== productId));
   }
 
   function isWishlisted(productId: number) {
-    return wishlistIds.includes(productId);
+    return items.some((i) => i.productId === productId);
   }
 
   function toggleWishlist(
     productId: number,
     isLoggedIn: boolean,
     onLoginRequired: () => void,
+    price?: number,
   ) {
     if (!isLoggedIn) {
+      // Save to guest wishlist in localStorage so it survives login
+      const guestItems = loadGuestItems();
+      if (!guestItems.some((i) => i.productId === productId)) {
+        saveGuestItems([
+          ...guestItems,
+          { productId, addedAt: Date.now(), priceAtAdd: price },
+        ]);
+      }
       onLoginRequired();
       return;
     }
     if (isWishlisted(productId)) {
       removeFromWishlist(productId);
     } else {
-      addToWishlist(productId);
+      addToWishlist(productId, price);
     }
+  }
+
+  // Sync guest wishlist after login
+  function syncGuestWishlist() {
+    const guestItems = loadGuestItems();
+    if (guestItems.length === 0) return;
+    setItems((prev) => {
+      const existingIds = new Set(prev.map((i) => i.productId));
+      const newItems = guestItems.filter((i) => !existingIds.has(i.productId));
+      return [...prev, ...newItems];
+    });
+    localStorage.removeItem(GUEST_KEY);
   }
 
   function triggerPriceDropAlerts(
@@ -110,12 +171,14 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     <WishlistContext.Provider
       value={{
         wishlistIds,
+        wishlistCount,
         priceDroppedIds,
         addToWishlist,
         removeFromWishlist,
         isWishlisted,
         toggleWishlist,
         triggerPriceDropAlerts,
+        syncGuestWishlist,
       }}
     >
       {children}
