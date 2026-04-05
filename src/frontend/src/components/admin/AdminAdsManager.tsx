@@ -24,15 +24,19 @@ import { useAdCampaign } from "@/context/AdCampaignContext";
 import type { AdWallet } from "@/context/AdWalletContext";
 import { useAdWallet } from "@/context/AdWalletContext";
 import {
+  ArrowDownCircle,
+  ArrowUpCircle,
   CheckCircle,
   CreditCard,
   DollarSign,
+  ExternalLink,
   Inbox,
   Layers,
   Megaphone,
   Pause,
   Play,
   TrendingUp,
+  Upload,
   Users,
   Wallet,
   XCircle,
@@ -317,9 +321,20 @@ export default function AdminAdsManager() {
   const pendingByType = (type: AdCampaign["adType"]) =>
     pendingCampaigns.filter((c) => c.adType === type);
 
-  const totalAdRevenue = wallets.reduce((s, w) => s + w.totalSpent, 0);
+  // Revenue: separate seller spend vs brand partner budget (fix: these were identical before)
   const sellerAdRevenue = wallets.reduce((s, w) => s + w.totalSpent, 0);
   const brandRevenue = MOCK_BRAND_CAMPAIGNS.reduce((s, c) => s + c.budget, 0);
+  const totalAdRevenue = sellerAdRevenue + brandRevenue;
+
+  // All ad wallet transactions flattened for the ledger
+  const allTransactions = wallets
+    .flatMap((w) =>
+      w.transactions.map((tx) => ({ ...tx, sellerEmail: w.sellerEmail })),
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
   const TAB_LIST: { key: MainTab; label: string }[] = [
     { key: "leads", label: "Brand Leads" },
@@ -369,7 +384,7 @@ export default function AdminAdsManager() {
         </div>
       </div>
 
-      {/* ── Tab 1: Brand Leads ─────────────────────────────── */}
+      {/* ── Tab 1: Brand Leads ─────────────────────────────────── */}
       {tab === "leads" && (
         <div className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -578,7 +593,7 @@ export default function AdminAdsManager() {
         </div>
       )}
 
-      {/* ── Tab 3: Slot Pricing ────────────────────────────── */}
+      {/* ── Tab 3: Slot Pricing ──────────────────────────────── */}
       {tab === "pricing" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -657,7 +672,7 @@ export default function AdminAdsManager() {
         </div>
       )}
 
-      {/* ── Tab 4: Approval Queues ─────────────────────────── */}
+      {/* ── Tab 4: Approval Queues ───────────────────────────── */}
       {tab === "approvals" && (
         <div className="space-y-6">
           {(
@@ -704,6 +719,10 @@ export default function AdminAdsManager() {
                         <TableRow>
                           <TableHead>Seller</TableHead>
                           <TableHead>Details</TableHead>
+                          {type === "video_spotlight" && (
+                            <TableHead>Source</TableHead>
+                          )}
+                          {type === "banner_ad" && <TableHead>Image</TableHead>}
                           <TableHead>Bid</TableHead>
                           <TableHead>Daily Budget</TableHead>
                           <TableHead>Target</TableHead>
@@ -732,6 +751,49 @@ export default function AdminAdsManager() {
                                 c.videoTitle ||
                                 "—"}
                             </TableCell>
+
+                            {/* Video source type column */}
+                            {type === "video_spotlight" && (
+                              <TableCell>
+                                {c.videoSourceType === "upload" ? (
+                                  <span className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                                    <Upload className="w-3 h-3" /> Upload
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                    <ExternalLink className="w-3 h-3" /> Link
+                                  </span>
+                                )}
+                                {(c.videoUrl || c.videoUploadUrl) && (
+                                  <a
+                                    href={c.videoUrl || c.videoUploadUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-xs text-blue-500 hover:underline mt-0.5 max-w-[120px] truncate"
+                                  >
+                                    Preview ↗
+                                  </a>
+                                )}
+                              </TableCell>
+                            )}
+
+                            {/* Banner image preview column */}
+                            {type === "banner_ad" && (
+                              <TableCell>
+                                {c.bannerImageUrl ? (
+                                  <img
+                                    src={c.bannerImageUrl}
+                                    alt="banner"
+                                    className="h-8 w-20 object-cover rounded border border-gray-200"
+                                  />
+                                ) : (
+                                  <span className="text-xs text-gray-400">
+                                    No image
+                                  </span>
+                                )}
+                              </TableCell>
+                            )}
+
                             <TableCell className="font-semibold text-sm">
                               ₹{c.maxBidCpc}/click
                             </TableCell>
@@ -787,7 +849,7 @@ export default function AdminAdsManager() {
         </div>
       )}
 
-      {/* ── Tab 5: Placement Controls ──────────────────────── */}
+      {/* ── Tab 5: Placement Controls ──────────────────────────── */}
       {tab === "placement" && (
         <div className="space-y-6 max-w-xl">
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
@@ -866,14 +928,15 @@ export default function AdminAdsManager() {
         </div>
       )}
 
-      {/* ── Tab 6: Revenue ────────────────────────────────── */}
+      {/* ── Tab 6: Revenue ────────────────────────────────────────── */}
       {tab === "revenue" && (
         <div className="space-y-5">
+          {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             {[
               {
                 label: "Total Ad Revenue",
-                value: totalAdRevenue + brandRevenue,
+                value: totalAdRevenue,
                 icon: TrendingUp,
                 color: "#006AFF",
               },
@@ -919,16 +982,106 @@ export default function AdminAdsManager() {
               </div>
             ))}
           </div>
+
+          {/* Monthly chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 className="font-semibold text-gray-800 mb-4">
               Monthly Revenue Breakdown
             </h3>
             <RevenueChart />
           </div>
+
+          {/* Detailed transaction ledger */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">
+                Ad Transaction Ledger
+              </h3>
+              <span className="text-xs text-gray-400">
+                {allTransactions.length} entries
+              </span>
+            </div>
+            {allTransactions.length === 0 ? (
+              <div
+                className="p-12 text-center"
+                data-ocid="admin.revenue.ledger.empty_state"
+              >
+                <Wallet className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No ad transactions yet.</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Transactions appear once sellers top up their Ad Wallets.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allTransactions.map((tx, i) => (
+                      <TableRow
+                        key={tx.id}
+                        data-ocid={`admin.revenue.ledger.row.${i + 1}`}
+                      >
+                        <TableCell className="text-xs text-gray-500 whitespace-nowrap">
+                          {new Date(tx.timestamp).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-gray-700">
+                          {tx.sellerEmail}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              tx.type === "credit"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-600"
+                            }`}
+                          >
+                            {tx.type === "credit" ? (
+                              <ArrowUpCircle className="w-3 h-3" />
+                            ) : (
+                              <ArrowDownCircle className="w-3 h-3" />
+                            )}
+                            {tx.type === "credit" ? "Recharge" : "Ad Spend"}
+                          </span>
+                        </TableCell>
+                        <TableCell
+                          className={`font-bold text-sm ${
+                            tx.type === "credit"
+                              ? "text-green-600"
+                              : "text-red-500"
+                          }`}
+                        >
+                          {tx.type === "credit" ? "+" : "-"}₹
+                          {tx.amount.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-500">
+                          {tx.description}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ── Tab 7: Escrow ─────────────────────────────────── */}
+      {/* ── Tab 7: Escrow ───────────────────────────────────────────── */}
       {tab === "escrow" && (
         <div className="space-y-5">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -1033,7 +1186,7 @@ export default function AdminAdsManager() {
         </div>
       )}
 
-      {/* ─── Reject reason dialog ───────────────────────────── */}
+      {/* ─── Reject reason dialog ──────────────────────────────────── */}
       <Dialog open={!!rejectId} onOpenChange={() => setRejectId(null)}>
         <DialogContent data-ocid="admin.approvals.reject.dialog">
           <DialogHeader>
@@ -1077,7 +1230,7 @@ export default function AdminAdsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Escrow action dialog ──────────────────────────── */}
+      {/* ─── Escrow action dialog ──────────────────────────────────── */}
       <Dialog open={!!escrowAction} onOpenChange={() => setEscrowAction(null)}>
         <DialogContent data-ocid="admin.escrow.action.dialog">
           <DialogHeader>

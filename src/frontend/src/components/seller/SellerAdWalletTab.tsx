@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAdWallet } from "@/context/AdWalletContext";
+import { razorpayBackend } from "@/utils/razorpayBackend";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -31,6 +32,22 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+// Razorpay script loader (same as CheckoutPage)
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (document.getElementById("razorpay-script")) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "razorpay-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 interface Props {
   sellerEmail: string;
 }
@@ -43,22 +60,71 @@ export default function SellerAdWalletTab({ sellerEmail }: Props) {
   const [amount, setAmount] = useState("");
   const [paying, setPaying] = useState(false);
 
-  const handleTopUp = () => {
+  const handleTopUp = async () => {
     const num = Number.parseFloat(amount);
     if (!num || num < 100) {
       toast.error("Minimum top-up amount is ₹100");
       return;
     }
     setPaying(true);
-    // Simulate Razorpay flow
-    setTimeout(() => {
-      const orderId = `rz_${Date.now()}`;
-      topUp(sellerEmail, num, orderId);
+    try {
+      const amountPaise = BigInt(Math.round(num * 100));
+      const receipt = `adwallet_${Date.now()}`;
+
+      const [razorpayOrderId, keyId, scriptLoaded] = await Promise.all([
+        razorpayBackend.createRazorpayOrder(amountPaise, receipt),
+        razorpayBackend.getRazorpayKeyId(),
+        loadRazorpayScript(),
+      ]);
+
+      if (!scriptLoaded) throw new Error("Failed to load Razorpay SDK.");
+
       setPaying(false);
-      setDialogOpen(false);
-      setAmount("");
-      toast.success(`₹${num.toLocaleString("en-IN")} added to Ad Wallet!`);
-    }, 1500);
+
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount: Number(amountPaise),
+        currency: "INR",
+        order_id: razorpayOrderId,
+        name: "AFLINO",
+        description: "Ad Wallet Top-up",
+        image: "/logo.png",
+        theme: { color: "#006AFF" },
+        prefill: { name: sellerEmail },
+        handler: () => {
+          topUp(sellerEmail, num, razorpayOrderId);
+          setDialogOpen(false);
+          setAmount("");
+          toast.success(`₹${num.toLocaleString("en-IN")} added to Ad Wallet!`);
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment cancelled.");
+          },
+        },
+      });
+      rzp.open();
+    } catch (err: unknown) {
+      setPaying(false);
+      // If Razorpay keys are not configured, fall back to simulation
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("maintenance") ||
+        msg.includes("key") ||
+        msg.includes("configured")
+      ) {
+        // Simulate for demo when keys are not set
+        const orderId = `rz_demo_${Date.now()}`;
+        topUp(sellerEmail, num, orderId);
+        setDialogOpen(false);
+        setAmount("");
+        toast.success(
+          `₹${num.toLocaleString("en-IN")} added to Ad Wallet! (Demo mode — configure Razorpay keys for live payments)`,
+        );
+      } else {
+        toast.error(msg || "Payment failed. Try again.");
+      }
+    }
   };
 
   return (

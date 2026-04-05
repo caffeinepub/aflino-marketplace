@@ -3,8 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import type { AdCampaign, AdTarget, AdType } from "@/context/AdCampaignContext";
+import type {
+  AdCampaign,
+  AdTarget,
+  AdType,
+  VideoSourceType,
+} from "@/context/AdCampaignContext";
 import { useAdCampaign } from "@/context/AdCampaignContext";
 import { useAdWallet } from "@/context/AdWalletContext";
 import { useProducts } from "@/context/ProductContext";
@@ -14,17 +18,19 @@ import {
   ChevronRight,
   Clapperboard,
   Image,
+  Link,
   Megaphone,
   MousePointerClick,
   Plus,
   Target,
   TrendingUp,
+  Upload,
   X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface Props {
@@ -65,7 +71,7 @@ const AD_TYPES: {
   {
     type: "video_spotlight",
     label: "Video Spotlight",
-    desc: "YouTube/Instagram embed in Watch & Shop section",
+    desc: "YouTube/Instagram embed or uploaded video in Watch & Shop",
     icon: Clapperboard,
   },
 ];
@@ -116,6 +122,12 @@ function CampaignCard({
             {campaign.targeting === "all"
               ? "All Platforms"
               : campaign.targeting}
+            {campaign.adType === "video_spotlight" &&
+              campaign.videoSourceType && (
+                <span className="ml-1 text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full uppercase">
+                  {campaign.videoSourceType}
+                </span>
+              )}
           </p>
         </div>
         <span
@@ -140,11 +152,7 @@ function CampaignCard({
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 mt-3">
         {[
-          {
-            icon: MousePointerClick,
-            label: "Clicks",
-            value: campaign.clicks,
-          },
+          { icon: MousePointerClick, label: "Clicks", value: campaign.clicks },
           { icon: Target, label: "Impressions", value: campaign.impressions },
           { icon: BarChart3, label: "CTR", value: `${ctr}%` },
         ].map(({ icon: Icon, label, value }) => (
@@ -193,9 +201,14 @@ interface FormState {
   adType: AdType;
   productId: string;
   productName: string;
+  bannerImageUrl: string; // base64 preview or upload URL
+  bannerImageFile: File | null;
   bannerTitle: string;
   bannerCta: string;
-  videoUrl: string;
+  videoSourceType: VideoSourceType;
+  videoUrl: string; // external link
+  videoUploadFile: File | null; // file for upload
+  videoUploadUrl: string; // local preview URL or stored URL
   videoTitle: string;
   maxBidCpc: number;
   dailyBudget: number;
@@ -206,9 +219,14 @@ const DEFAULT_FORM: FormState = {
   adType: "product_boost",
   productId: "",
   productName: "",
+  bannerImageUrl: "",
+  bannerImageFile: null,
   bannerTitle: "",
   bannerCta: "Shop Now",
+  videoSourceType: "link",
   videoUrl: "",
+  videoUploadFile: null,
+  videoUploadUrl: "",
   videoTitle: "",
   maxBidCpc: 5,
   dailyBudget: 300,
@@ -231,9 +249,33 @@ export default function SellerAdCampaignTab({
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
 
-  const lowBalance = wallet.balance < 50;
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
+  const lowBalance = wallet.balance < 50;
   const sellerProducts = products.filter((p) => p.seller === sellerName);
+
+  const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setForm((prev) => ({
+      ...prev,
+      bannerImageFile: file,
+      bannerImageUrl: url,
+    }));
+  };
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setForm((prev) => ({
+      ...prev,
+      videoUploadFile: file,
+      videoUploadUrl: url,
+    }));
+  };
 
   const handleSubmit = () => {
     if (form.adType === "product_boost" && !form.productName) {
@@ -244,9 +286,15 @@ export default function SellerAdCampaignTab({
       toast.error("Please enter a banner title.");
       return;
     }
-    if (form.adType === "video_spotlight" && !form.videoUrl) {
-      toast.error("Please enter a video URL.");
-      return;
+    if (form.adType === "video_spotlight") {
+      if (form.videoSourceType === "link" && !form.videoUrl) {
+        toast.error("Please enter a YouTube or Instagram URL.");
+        return;
+      }
+      if (form.videoSourceType === "upload" && !form.videoUploadUrl) {
+        toast.error("Please upload a video file.");
+        return;
+      }
     }
 
     createCampaign({
@@ -255,9 +303,19 @@ export default function SellerAdCampaignTab({
       adType: form.adType,
       productId: form.productId ? Number(form.productId) : undefined,
       productName: form.productName || undefined,
+      bannerImageUrl: form.bannerImageUrl || undefined,
       bannerTitle: form.bannerTitle || undefined,
       bannerCta: form.bannerCta || undefined,
-      videoUrl: form.videoUrl || undefined,
+      videoUrl:
+        form.videoSourceType === "link"
+          ? form.videoUrl || undefined
+          : undefined,
+      videoUploadUrl:
+        form.videoSourceType === "upload"
+          ? form.videoUploadUrl || undefined
+          : undefined,
+      videoSourceType:
+        form.adType === "video_spotlight" ? form.videoSourceType : undefined,
       videoTitle: form.videoTitle || undefined,
       targeting: form.targeting,
       maxBidCpc: form.maxBidCpc,
@@ -446,6 +504,8 @@ export default function SellerAdCampaignTab({
                     <p className="text-sm font-semibold text-gray-700">
                       Campaign Details
                     </p>
+
+                    {/* Product Boost */}
                     {form.adType === "product_boost" && (
                       <div className="space-y-1.5">
                         <Label>Select Product</Label>
@@ -467,7 +527,6 @@ export default function SellerAdCampaignTab({
                               {p.title}
                             </option>
                           ))}
-                          {/* Fallback if no seller products found */}
                           {sellerProducts.length === 0 && (
                             <option value="1">Sample Product (demo)</option>
                           )}
@@ -475,6 +534,7 @@ export default function SellerAdCampaignTab({
                       </div>
                     )}
 
+                    {/* Banner Ad */}
                     {form.adType === "banner_ad" && (
                       <>
                         <div className="space-y-1.5">
@@ -497,20 +557,60 @@ export default function SellerAdCampaignTab({
                             data-ocid="seller.ad_campaign.banner_cta.input"
                           />
                         </div>
+                        {/* Banner Image Upload */}
+                        <div className="space-y-1.5">
+                          <Label>Banner Image (1200×200 px recommended)</Label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={bannerInputRef}
+                            className="hidden"
+                            onChange={handleBannerImageChange}
+                          />
+                          {form.bannerImageUrl ? (
+                            <div className="relative">
+                              <img
+                                src={form.bannerImageUrl}
+                                alt="Banner preview"
+                                className="w-full h-24 object-cover rounded-xl border border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    bannerImageUrl: "",
+                                    bannerImageFile: null,
+                                  }))
+                                }
+                                className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow"
+                              >
+                                <X className="w-3.5 h-3.5 text-gray-600" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => bannerInputRef.current?.click()}
+                              className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-blue-300 transition-colors text-gray-400"
+                              data-ocid="seller.ad_campaign.banner_image.upload_button"
+                            >
+                              <Upload className="w-5 h-5" />
+                              <span className="text-xs">
+                                Click to upload banner image
+                              </span>
+                            </button>
+                          )}
+                          <p className="text-xs text-gray-400">
+                            PNG, JPG · Max 5 MB · Recommended: 1200×200 px
+                          </p>
+                        </div>
                       </>
                     )}
 
+                    {/* Video Spotlight */}
                     {form.adType === "video_spotlight" && (
                       <>
-                        <div className="space-y-1.5">
-                          <Label>YouTube / Instagram URL</Label>
-                          <Input
-                            placeholder="https://youtube.com/watch?v=..."
-                            value={form.videoUrl}
-                            onChange={(e) => setF("videoUrl", e.target.value)}
-                            data-ocid="seller.ad_campaign.video_url.input"
-                          />
-                        </div>
                         <div className="space-y-1.5">
                           <Label>Video Title</Label>
                           <Input
@@ -520,6 +620,126 @@ export default function SellerAdCampaignTab({
                             data-ocid="seller.ad_campaign.video_title.input"
                           />
                         </div>
+
+                        {/* Source type toggle */}
+                        <div className="space-y-1.5">
+                          <Label>Video Source</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              {
+                                value: "link" as VideoSourceType,
+                                label: "External Link",
+                                icon: Link,
+                                desc: "YouTube / Instagram",
+                              },
+                              {
+                                value: "upload" as VideoSourceType,
+                                label: "Upload File",
+                                icon: Upload,
+                                desc: "MP4, WebM, MOV",
+                              },
+                            ].map(({ value, label, icon: Icon, desc }) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setF("videoSourceType", value)}
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                                  form.videoSourceType === value
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-100 hover:border-gray-200"
+                                }`}
+                                data-ocid={`seller.ad_campaign.video_source.${value}.toggle`}
+                              >
+                                <Icon
+                                  className="w-4 h-4"
+                                  style={{
+                                    color:
+                                      form.videoSourceType === value
+                                        ? "#006AFF"
+                                        : "#9ca3af",
+                                  }}
+                                />
+                                <div>
+                                  <p
+                                    className={`text-sm font-semibold ${form.videoSourceType === value ? "text-blue-700" : "text-gray-700"}`}
+                                  >
+                                    {label}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {desc}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* External link input */}
+                        {form.videoSourceType === "link" && (
+                          <div className="space-y-1.5">
+                            <Label>YouTube / Instagram URL</Label>
+                            <Input
+                              placeholder="https://youtube.com/watch?v=..."
+                              value={form.videoUrl}
+                              onChange={(e) => setF("videoUrl", e.target.value)}
+                              data-ocid="seller.ad_campaign.video_url.input"
+                            />
+                          </div>
+                        )}
+
+                        {/* File upload */}
+                        {form.videoSourceType === "upload" && (
+                          <div className="space-y-1.5">
+                            <Label>Upload Video File</Label>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              ref={videoInputRef}
+                              className="hidden"
+                              onChange={handleVideoFileChange}
+                            />
+                            {form.videoUploadUrl ? (
+                              <div className="relative">
+                                <video
+                                  src={form.videoUploadUrl}
+                                  className="w-full h-32 object-cover rounded-xl border border-gray-200 bg-black"
+                                  controls
+                                >
+                                  {/* biome-ignore lint/a11y/useMediaCaption: video preview only */}
+                                  <track kind="captions" />
+                                </video>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setForm((p) => ({
+                                      ...p,
+                                      videoUploadUrl: "",
+                                      videoUploadFile: null,
+                                    }))
+                                  }
+                                  className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow"
+                                >
+                                  <X className="w-3.5 h-3.5 text-gray-600" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => videoInputRef.current?.click()}
+                                className="w-full h-28 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-blue-300 transition-colors text-gray-400"
+                                data-ocid="seller.ad_campaign.video_upload.button"
+                              >
+                                <Upload className="w-5 h-5" />
+                                <span className="text-xs">
+                                  Click to upload video
+                                </span>
+                                <span className="text-[10px] text-gray-300">
+                                  MP4, WebM, MOV · Max 100 MB
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

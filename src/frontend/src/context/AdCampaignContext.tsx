@@ -10,6 +10,9 @@ export type AdStatus =
   | "exhausted";
 export type AdTarget = "search" | "home" | "all";
 
+// Video Spotlight can come from an external link or a direct upload
+export type VideoSourceType = "link" | "upload";
+
 export interface AdCampaign {
   id: string;
   sellerEmail: string;
@@ -27,7 +30,9 @@ export interface AdCampaign {
   bannerCta?: string;
 
   // Video Spotlight specific
-  videoUrl?: string;
+  videoUrl?: string; // external YouTube / Instagram link
+  videoUploadUrl?: string; // URL of uploaded video file (blob-storage)
+  videoSourceType?: VideoSourceType; // discriminator: "link" | "upload"
   videoTitle?: string;
 
   // Common
@@ -182,6 +187,7 @@ export function AdCampaignProvider({ children }: { children: ReactNode }) {
     save("adCampaigns", updated);
   };
 
+  // Resets todaySpent if the last reset was not today, and persists it
   const resetDailyBudgetIfNeeded = (c: AdCampaign): AdCampaign => {
     if (c.lastResetDate !== today()) {
       return { ...c, todaySpent: 0, lastResetDate: today() };
@@ -261,12 +267,38 @@ export function AdCampaignProvider({ children }: { children: ReactNode }) {
   };
 
   const isActive = (c: AdCampaign, placement: "search" | "home") => {
-    if (c.status !== "active") return false;
     if (c.adType !== "product_boost") return false;
     if (c.targeting !== "all" && c.targeting !== placement) return false;
+
     const refreshed = resetDailyBudgetIfNeeded(c);
-    if (refreshed.todaySpent >= refreshed.dailyBudget) return false;
-    return true;
+
+    // Auto-exhaust: if budget is used up, mark as exhausted and persist
+    if (refreshed.todaySpent >= refreshed.dailyBudget) {
+      if (refreshed.status === "active") {
+        // Persist status change (don't call persist here to avoid infinite loop — update inline)
+        const updated = campaigns.map((camp) =>
+          camp.id === c.id
+            ? { ...refreshed, status: "exhausted" as AdStatus }
+            : camp,
+        );
+        save("adCampaigns", updated);
+        setCampaigns(updated);
+      }
+      return false;
+    }
+
+    // Persist daily budget reset if date changed
+    if (refreshed.lastResetDate !== c.lastResetDate) {
+      const updated = campaigns.map((camp) =>
+        camp.id === c.id ? refreshed : camp,
+      );
+      save("adCampaigns", updated);
+      setCampaigns(updated);
+      // If was exhausted and budget reset, reactivate to active
+      return refreshed.status === "active" || refreshed.status === "exhausted";
+    }
+
+    return refreshed.status === "active";
   };
 
   const getSponsoredProductIds = (
@@ -295,15 +327,21 @@ export function AdCampaignProvider({ children }: { children: ReactNode }) {
       campaigns.map((c) => {
         if (c.id !== id) return c;
         const newClicks = c.clicks + 1;
+        const newTodaySpent = c.todaySpent + c.maxBidCpc;
         const quality = calcQuality(newClicks, c.impressions);
-        return {
+        const updated: AdCampaign = {
           ...c,
           clicks: newClicks,
           qualityScore: quality,
           adRank: calcAdRank(c.maxBidCpc, quality),
-          todaySpent: c.todaySpent + c.maxBidCpc,
+          todaySpent: newTodaySpent,
           totalBudgetSpent: c.totalBudgetSpent + c.maxBidCpc,
         };
+        // Auto-exhaust if daily budget reached
+        if (updated.status === "active" && newTodaySpent >= c.dailyBudget) {
+          updated.status = "exhausted";
+        }
+        return updated;
       }),
     );
   };
