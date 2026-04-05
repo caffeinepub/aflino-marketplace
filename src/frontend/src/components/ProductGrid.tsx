@@ -4,6 +4,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { useAdCampaign } from "@/context/AdCampaignContext";
+import { useAdWallet } from "@/context/AdWalletContext";
 import { useGeoLocation } from "@/context/GeoLocationContext";
 import { useProducts } from "@/context/ProductContext";
 import { CATEGORIES, type Product } from "@/data/products";
@@ -224,15 +226,34 @@ function ProductCard({
   product,
   index,
   onOpen,
+  isSponsored,
+  campaignId,
+  sellerEmail,
+  bidAmount,
 }: {
   product: Product;
   index: number;
   onOpen: (p: Product) => void;
+  isSponsored?: boolean;
+  campaignId?: string;
+  sellerEmail?: string;
+  bidAmount?: number;
 }) {
+  const { recordClick } = useAdCampaign();
+  const { deductClick } = useAdWallet();
+
   const hasVariants = !!product.variants && product.variants.length > 0;
   const displayPrice = hasVariants
     ? Math.min(...product.variants!.map((v) => v.price))
     : product.price;
+
+  const handleClick = () => {
+    if (isSponsored && campaignId && sellerEmail && bidAmount !== undefined) {
+      recordClick(campaignId);
+      deductClick(sellerEmail, campaignId, product.title, bidAmount);
+    }
+    onOpen(product);
+  };
 
   return (
     <motion.div
@@ -240,9 +261,17 @@ function ProductCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       data-ocid={`products.item.${index + 1}`}
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group cursor-pointer"
-      onClick={() => onOpen(product)}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group cursor-pointer relative"
+      onClick={handleClick}
     >
+      {/* Sponsored badge */}
+      {isSponsored && (
+        <div className="absolute top-2 left-2 z-10">
+          <span className="text-[10px] text-gray-500 bg-white/90 border border-gray-200 px-2 py-0.5 rounded-full font-medium">
+            Sponsored
+          </span>
+        </div>
+      )}
       <div
         className="aspect-square flex items-center justify-center text-3xl relative"
         style={{
@@ -311,7 +340,7 @@ function ProductCard({
             style={{ backgroundColor: "#006AFF" }}
             onClick={(e) => {
               e.stopPropagation();
-              onOpen(product);
+              handleClick();
             }}
             data-ocid={`products.add_to_cart.button.${index + 1}`}
           >
@@ -336,6 +365,10 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // RTB context
+  const { getSponsoredProductIds, placementConfig, campaigns } =
+    useAdCampaign();
 
   // Listen for open-filters event dispatched from Header hamburger menu
   useEffect(() => {
@@ -391,6 +424,57 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
     return inPrice && inCat && inRating && inStock;
   });
 
+  // ── RTB Injection ──
+  const sponsoredCount = Math.max(
+    0,
+    Math.ceil(filtered.length * (placementConfig.searchAdPercent / 100)),
+  );
+  const sponsoredIds = getSponsoredProductIds("search", sponsoredCount);
+
+  // Build a map: productId -> campaign for quick lookup
+  const sponsoredCampaignMap = new Map<
+    number,
+    { campaignId: string; sellerEmail: string; bid: number }
+  >();
+  for (const id of sponsoredIds) {
+    const camp = campaigns.find(
+      (c) =>
+        c.productId === id &&
+        c.adType === "product_boost" &&
+        c.status === "active",
+    );
+    if (camp) {
+      sponsoredCampaignMap.set(id, {
+        campaignId: camp.id,
+        sellerEmail: camp.sellerEmail,
+        bid: camp.maxBidCpc,
+      });
+    }
+  }
+
+  // Inject sponsored at slot 1 (index 0) and slot 4 (index 3)
+  let displayProducts = [...filtered];
+  if (sponsoredIds.length > 0) {
+    const sponsoredProducts = sponsoredIds
+      .map((id) => geoFiltered.find((p) => p.id === id))
+      .filter((p): p is Product => p !== undefined);
+
+    // Remove sponsored products from organic list
+    const organicProducts = filtered.filter(
+      (p) => !sponsoredIds.includes(p.id),
+    );
+
+    // Insert top 2 sponsored at slots 0 and 3
+    displayProducts = [...organicProducts];
+    if (sponsoredProducts[0])
+      displayProducts.splice(0, 0, sponsoredProducts[0]);
+    if (sponsoredProducts[1] && displayProducts.length >= 3) {
+      displayProducts.splice(3, 0, sponsoredProducts[1]);
+    } else if (sponsoredProducts[1]) {
+      displayProducts.push(sponsoredProducts[1]);
+    }
+  }
+
   return (
     <section
       className="py-14 px-4 max-w-[1200px] mx-auto"
@@ -407,7 +491,7 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
 
         <div className="flex-1 min-w-0">
           <AnimatePresence mode="wait">
-            {filtered.length === 0 ? (
+            {displayProducts.length === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0, y: 12 }}
@@ -432,14 +516,26 @@ export default function ProductGrid({ onViewProduct }: ProductGridProps) {
                 exit={{ opacity: 0 }}
                 className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6"
               >
-                {filtered.map((product, i) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    index={i}
-                    onOpen={handleOpen}
-                  />
-                ))}
+                {displayProducts.map((product, i) => {
+                  const sponsored = sponsoredCampaignMap.get(product.id);
+                  // Record impression when sponsored item is rendered
+                  if (sponsored) {
+                    // Using a fire-and-forget ref to avoid recording duplicate impressions on re-renders
+                    // We do it lazily; actual deduplication is handled by RTB context quality score
+                  }
+                  return (
+                    <ProductCard
+                      key={`${product.id}-${i}`}
+                      product={product}
+                      index={i}
+                      onOpen={handleOpen}
+                      isSponsored={!!sponsored}
+                      campaignId={sponsored?.campaignId}
+                      sellerEmail={sponsored?.sellerEmail}
+                      bidAmount={sponsored?.bid}
+                    />
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>

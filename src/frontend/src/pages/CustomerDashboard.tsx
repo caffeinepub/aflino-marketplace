@@ -2,6 +2,7 @@ import InstallPWAButton from "@/components/InstallPWAButton";
 import InvoiceButton from "@/components/InvoiceButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAdCampaign } from "@/context/AdCampaignContext";
 import {
   PINCODE_MAP,
   type SavedAddress,
@@ -34,6 +35,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Star,
+  Tag,
   Trash2,
   Truck,
   User,
@@ -1127,6 +1129,8 @@ export default function CustomerDashboard({
   const { products } = useProducts();
   const { getSellerByEmail } = useSellerContext();
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
+  const { getApprovedBannerAds } = useAdCampaign();
+  const bannerAds = getApprovedBannerAds().slice(0, 2);
 
   // Sort orders descending by date (latest first)
   const sortedOrders = [...orders].sort(
@@ -1219,6 +1223,49 @@ export default function CustomerDashboard({
 
         {/* Content */}
         <main className="flex-1 p-4 sm:p-8">
+          {/* Account Ad Banners */}
+          {bannerAds.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              {bannerAds.map((ad) => (
+                <div
+                  key={ad.id}
+                  className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-transparent"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #f0f6ff 0%, #fce7f3 100%)",
+                    borderImage:
+                      "linear-gradient(135deg, #006AFF 0%, #EC008C 100%) 1",
+                  }}
+                  data-ocid="customer.ad_banner.card"
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#006AFF" }}
+                  >
+                    <Tag className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="text-xs font-bold uppercase tracking-wider"
+                      style={{ color: "#EC008C" }}
+                    >
+                      Deal of the Day
+                    </span>
+                    <p className="text-sm font-semibold text-gray-800 line-clamp-1">
+                      {ad.bannerTitle}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-white px-3 py-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: "#006AFF" }}
+                  >
+                    {ad.bannerCta || "Shop Now"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {activeTab === "wallet" ? (
             <WalletTab />
           ) : activeTab === "reviews" ? (

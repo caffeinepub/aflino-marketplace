@@ -8,6 +8,8 @@ import LocationModal from "@/components/LocationModal";
 import PWAInstallPopup from "@/components/PWAInstallPopup";
 import ProductGrid from "@/components/ProductGrid";
 import { Toaster } from "@/components/ui/sonner";
+import { AdCampaignProvider } from "@/context/AdCampaignContext";
+import { AdWalletProvider } from "@/context/AdWalletContext";
 import { AddressProvider } from "@/context/AddressContext";
 import { AffiliateProvider } from "@/context/AffiliateContext";
 import { BlacklistProvider } from "@/context/BlacklistContext";
@@ -634,9 +636,13 @@ export default function App() {
                                               <Toaster />
                                               <IOSInstallBanner />
                                               <PWAInstallPopup />
-                                              <AffiliateProvider>
-                                                <AppContent />
-                                              </AffiliateProvider>
+                                              <AdWalletProvider>
+                                                <AdCampaignProvider>
+                                                  <AffiliateProvider>
+                                                    <AppContent />
+                                                  </AffiliateProvider>
+                                                </AdCampaignProvider>
+                                              </AdWalletProvider>
                                             </FlashSaleProvider>
                                           </ProductProvider>
                                         </CODProvider>
