@@ -16,6 +16,7 @@ import QRScannerModal from "@/components/seller/QRScannerModal";
 import QuickAddProductModal from "@/components/seller/QuickAddProductModal";
 import SellerAdCampaignTab from "@/components/seller/SellerAdCampaignTab";
 import SellerAdWalletTab from "@/components/seller/SellerAdWalletTab";
+import SellerAnalyticsTab from "@/components/seller/SellerAnalyticsTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ import {
 } from "@/hooks/useLogisticsConfig";
 import {
   AlertCircle,
+  BarChart2,
   BarChart3,
   Bell,
   Camera,
@@ -73,7 +75,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { logWhatsApp } from "../utils/communicationLogger";
 
-type Tab = "upload" | "wallet" | "orders" | "products" | "ads" | "ad-wallet";
+type Tab =
+  | "upload"
+  | "wallet"
+  | "orders"
+  | "products"
+  | "ads"
+  | "ad-wallet"
+  | "analytics";
 
 interface Props {
   sellerEmail?: string;
@@ -399,6 +408,19 @@ export default function SellerDashboard({
           >
             <CreditCard className="w-4 h-4" />
             Ad Wallet
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("analytics")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+              activeTab === "analytics"
+                ? "bg-pink-50 text-pink-600"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+            data-ocid="seller.analytics.tab"
+          >
+            <BarChart2 className="w-4 h-4" />
+            Analytics
           </button>
           {/* Install App */}
           <div className="mx-3 mb-4 p-3 rounded-xl border border-blue-100 bg-blue-50">
@@ -1395,6 +1417,12 @@ export default function SellerDashboard({
 
             {activeTab === "ad-wallet" && (
               <SellerAdWalletTab
+                sellerEmail={sellerEmail ?? "seller@aflino.com"}
+              />
+            )}
+
+            {activeTab === "analytics" && (
+              <SellerAnalyticsTab
                 sellerEmail={sellerEmail ?? "seller@aflino.com"}
               />
             )}

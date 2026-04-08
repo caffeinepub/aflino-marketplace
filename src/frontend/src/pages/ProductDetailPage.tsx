@@ -1,5 +1,6 @@
 import AuthModal, { type AuthView } from "@/components/AuthModal";
 import DeliveryETAWidget from "@/components/DeliveryETAWidget";
+import Viewer360 from "@/components/Viewer360";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -856,6 +857,9 @@ export default function ProductDetailPage({
   const [descExpanded, setDescExpanded] = useState(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [activeMediaTab, setActiveMediaTab] = useState<"photos" | "360">(
+    "photos",
+  );
 
   const colorScrollRef = useRef<HTMLDivElement>(null);
   const sizeScrollRef = useRef<HTMLDivElement>(null);
@@ -1084,110 +1088,182 @@ export default function ProductDetailPage({
         <div className="max-w-5xl mx-auto px-4 py-8">
           {/* Hero Section */}
           <div className="grid md:grid-cols-2 gap-8 mb-10">
-            {/* Image */}
+            {/* Image / 360° Media column */}
             <div className="flex flex-col gap-3">
-              <div
-                className="rounded-2xl flex items-center justify-center relative overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #f0f6ff 0%, #deeaff 100%)",
-                  minHeight: 320,
-                }}
-              >
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={product.images[activeImageIdx] ?? product.images[0]}
-                    alt={product.title}
-                    className="w-full h-80 object-cover rounded-2xl"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://picsum.photos/seed/fallback0/400/400";
-                    }}
-                  />
-                ) : (
-                  <span className="text-8xl">{categoryEmoji}</span>
-                )}
-                {isOutOfStock && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-2xl">
-                    <span className="bg-red-500 text-white font-bold px-5 py-2 rounded-full">
-                      Out of Stock
-                    </span>
-                  </div>
-                )}
-                {hasVariants && (
-                  <div className="absolute top-3 right-3">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
-                      style={{ backgroundColor: AFLINO_BLUE }}
-                    >
-                      {product.variants!.length} variants
-                    </span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const isLoggedIn = role !== null;
-                    toggleWishlist(product!.id, isLoggedIn, () =>
-                      setAuthView("login"),
-                    );
-                  }}
-                  data-ocid="product.wishlist.toggle"
-                  className="absolute bottom-3 right-3 z-10 p-2 rounded-full shadow-md transition-all"
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.85)",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                  title={
-                    isWishlisted(product!.id)
-                      ? "Remove from Wishlist"
-                      : "Add to Wishlist"
-                  }
+              {/* Tab switcher — only render when 360 data is available */}
+              {product.folder360Url && (product.frameCount360 ?? 36) >= 24 && (
+                <div
+                  className="flex gap-1 p-1 rounded-xl"
+                  style={{ background: "#f0f6ff", width: "fit-content" }}
+                  data-ocid="product.media.tab_switcher"
                 >
-                  <Heart
-                    size={20}
-                    style={
-                      isWishlisted(product!.id)
-                        ? { fill: "#EC008C", color: "#EC008C" }
-                        : { fill: "none", color: "#9ca3af" }
+                  <button
+                    type="button"
+                    onClick={() => setActiveMediaTab("photos")}
+                    data-ocid="product.media.tab.photos"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                    style={{
+                      backgroundColor:
+                        activeMediaTab === "photos"
+                          ? AFLINO_BLUE
+                          : "transparent",
+                      color: activeMediaTab === "photos" ? "#fff" : "#6b7280",
+                    }}
+                  >
+                    <Camera size={14} />
+                    Photos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMediaTab("360")}
+                    data-ocid="product.media.tab.360"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                    style={{
+                      backgroundColor:
+                        activeMediaTab === "360" ? AFLINO_BLUE : "transparent",
+                      color: activeMediaTab === "360" ? "#fff" : "#6b7280",
+                    }}
+                  >
+                    <span style={{ fontSize: 13 }}>↻</span>
+                    360° View
+                  </button>
+                </div>
+              )}
+
+              {/* 360° Viewer */}
+              {activeMediaTab === "360" &&
+                product.folder360Url &&
+                (product.frameCount360 ?? 36) >= 24 && (
+                  <Viewer360
+                    frames={Array.from(
+                      { length: product.frameCount360 ?? 36 },
+                      (_, i) =>
+                        `${product.folder360Url}/frame_${String(i + 1).padStart(3, "0")}.jpg`,
+                    )}
+                    highResFrames={
+                      product.highRes360FolderUrl
+                        ? Array.from(
+                            { length: product.frameCount360 ?? 36 },
+                            (_, i) =>
+                              `${product.highRes360FolderUrl}/frame_${String(i + 1).padStart(3, "0")}.jpg`,
+                          )
+                        : undefined
                     }
+                    productName={product.title}
                   />
-                </button>
-              </div>
-              {/* Thumbnail Strip */}
-              {product.images && product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-                  {product.images.map((imgUrl, idx) => (
-                    <button
-                      key={imgUrl}
-                      type="button"
-                      onClick={() => setActiveImageIdx(idx)}
-                      className="flex-shrink-0"
-                      style={{
-                        padding: 0,
-                        border:
-                          activeImageIdx === idx
-                            ? `2.5px solid ${AFLINO_BLUE}`
-                            : "2px solid #e5e7eb",
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        background: "none",
-                        cursor: "pointer",
-                      }}
-                    >
+                )}
+
+              {/* Standard photo gallery — shown when Photos tab is active (or no 360 data) */}
+              {(activeMediaTab === "photos" ||
+                !product.folder360Url ||
+                (product.frameCount360 ?? 36) < 24) && (
+                <>
+                  <div
+                    className="rounded-2xl flex items-center justify-center relative overflow-hidden"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #f0f6ff 0%, #deeaff 100%)",
+                      minHeight: 320,
+                    }}
+                  >
+                    {product.images && product.images.length > 0 ? (
                       <img
-                        src={imgUrl}
-                        alt={`Thumbnail ${idx + 1}`}
-                        className="w-16 h-16 object-cover"
+                        src={
+                          product.images[activeImageIdx] ?? product.images[0]
+                        }
+                        alt={product.title}
+                        className="w-full h-80 object-cover rounded-2xl"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            `https://picsum.photos/seed/thumb${idx}/64/64`;
+                            "https://picsum.photos/seed/fallback0/400/400";
                         }}
                       />
+                    ) : (
+                      <span className="text-8xl">{categoryEmoji}</span>
+                    )}
+                    {isOutOfStock && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-2xl">
+                        <span className="bg-red-500 text-white font-bold px-5 py-2 rounded-full">
+                          Out of Stock
+                        </span>
+                      </div>
+                    )}
+                    {hasVariants && (
+                      <div className="absolute top-3 right-3">
+                        <span
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full text-white"
+                          style={{ backgroundColor: AFLINO_BLUE }}
+                        >
+                          {product.variants!.length} variants
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isLoggedIn = role !== null;
+                        toggleWishlist(product!.id, isLoggedIn, () =>
+                          setAuthView("login"),
+                        );
+                      }}
+                      data-ocid="product.wishlist.toggle"
+                      className="absolute bottom-3 right-3 z-10 p-2 rounded-full shadow-md transition-all"
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.85)",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                      title={
+                        isWishlisted(product!.id)
+                          ? "Remove from Wishlist"
+                          : "Add to Wishlist"
+                      }
+                    >
+                      <Heart
+                        size={20}
+                        style={
+                          isWishlisted(product!.id)
+                            ? { fill: "#EC008C", color: "#EC008C" }
+                            : { fill: "none", color: "#9ca3af" }
+                        }
+                      />
                     </button>
-                  ))}
-                </div>
+                  </div>
+                  {/* Thumbnail Strip */}
+                  {product.images && product.images.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                      {product.images.map((imgUrl, idx) => (
+                        <button
+                          key={imgUrl}
+                          type="button"
+                          onClick={() => setActiveImageIdx(idx)}
+                          className="flex-shrink-0"
+                          style={{
+                            padding: 0,
+                            border:
+                              activeImageIdx === idx
+                                ? `2.5px solid ${AFLINO_BLUE}`
+                                : "2px solid #e5e7eb",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                            background: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`Thumbnail ${idx + 1}`}
+                            className="w-16 h-16 object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                `https://picsum.photos/seed/thumb${idx}/64/64`;
+                            }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

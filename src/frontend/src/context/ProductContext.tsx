@@ -1,6 +1,15 @@
 import type React from "react";
 import { createContext, useContext, useMemo, useState } from "react";
-import { PRODUCTS, type Product } from "../data/products";
+import {
+  PRODUCTS,
+  type Product,
+  type Product360Asset,
+  type ProductMedia,
+  type ProductVariantExtended,
+} from "../data/products";
+
+// Re-export new types so consumers can import from ProductContext
+export type { Product360Asset, ProductMedia, ProductVariantExtended };
 
 interface BulkUpdate {
   id: number;
@@ -8,6 +17,14 @@ interface BulkUpdate {
   discountedPrice?: number;
   stock?: number;
   stockThreshold?: number;
+  // Extended fields from 20-col CSV
+  skuId?: string;
+  brand?: string;
+  isVariable?: boolean;
+  parentSku?: string;
+  videoUrl?: string;
+  folder360Url?: string;
+  highRes360FolderUrl?: string;
 }
 
 interface ProductContextType {
@@ -79,6 +96,24 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
           ...(update.stock !== undefined ? { stock: update.stock } : {}),
           ...(update.stockThreshold !== undefined
             ? { stockThreshold: update.stockThreshold }
+            : {}),
+          // Extended fields — only applied when present (20-col CSV)
+          ...(update.skuId !== undefined ? { skuId: update.skuId } : {}),
+          ...(update.brand !== undefined ? { brand: update.brand } : {}),
+          ...(update.isVariable !== undefined
+            ? { isVariable: update.isVariable }
+            : {}),
+          ...(update.parentSku !== undefined
+            ? { parentSku: update.parentSku }
+            : {}),
+          ...(update.videoUrl !== undefined
+            ? { videoUrl: update.videoUrl }
+            : {}),
+          ...(update.folder360Url !== undefined
+            ? { folder360Url: update.folder360Url }
+            : {}),
+          ...(update.highRes360FolderUrl !== undefined
+            ? { highRes360FolderUrl: update.highRes360FolderUrl }
             : {}),
         };
       }),

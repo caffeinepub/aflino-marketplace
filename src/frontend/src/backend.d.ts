@@ -7,13 +7,6 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface Product {
-    name: string;
-    description: string;
-    seller: Principal;
-    category: string;
-    price: bigint;
-}
 export interface WhatsAppLog {
     id: bigint;
     status: string;
@@ -87,6 +80,13 @@ export interface UserProfile {
     name: string;
     role: string;
     email: string;
+}
+export interface Product {
+    name: string;
+    description: string;
+    seller: Principal;
+    category: string;
+    price: bigint;
 }
 export enum ReviewStatus {
     pending = "pending",

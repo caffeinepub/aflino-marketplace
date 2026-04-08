@@ -1,0 +1,26 @@
+{
+  "overview": "AFLINO is a modern multi-vendor e-commerce marketplace with a high-conversion checkout experience — live order calculations, multiple saved addresses, UPI/Card/NetBanking/COD payment options, prepaid discounts, and real-time delivery estimates.",
+  "features": [
+    "High-conversion checkout with live order summary",
+    "Multiple saved addresses with auto city/state detection",
+    "UPI, Card, Net Banking, and COD payment options",
+    "Prepaid discount incentive (Save ₹30)",
+    "Real-time delivery ETA (3-zone model)",
+    "Order confirmation with tracking",
+    "Failed payment retry flow",
+    "Conversion-boost scarcity and speed badges",
+    "AFLINO Coin redemption at checkout",
+    "Mobile-first responsive design"
+  ],
+  "category": "e-commerce",
+  "tags": [
+    "marketplace",
+    "checkout",
+    "e-commerce",
+    "mobile-first",
+    "multi-vendor",
+    "payments",
+    "india"
+  ],
+  "last_updated": "2026-04-08T15:54:32.136Z"
+}

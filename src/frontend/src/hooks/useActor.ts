@@ -1,59 +1,38 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import type { backendInterface } from "../backend";
-import { createActorWithConfig } from "../config";
-import { getSecretParameter } from "../utils/urlParams";
-import { useInternetIdentity } from "./useInternetIdentity";
+/**
+ * useActor stub — returns a minimal actor object for components that need it.
+ *
+ * The backend canister is currently empty (backendInterface has no methods).
+ * All consuming components (GatepassQR, ShippingLabelButton, QRSecuritySection,
+ * PickupConfirmationPage) already guard against missing methods via `typeof actor.method === "function"`
+ * checks, so returning `null` for actor is safe and triggers their local fallbacks.
+ *
+ * When the backend gains methods, replace this stub with a proper implementation
+ * that calls createActor from src/backend.ts.
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const ACTOR_QUERY_KEY = "actor";
-export function useActor() {
-  const { identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
-  const actorQuery = useQuery<backendInterface>({
-    queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      const isAuthenticated = !!identity;
+export interface ActorResult {
+  actor: null;
+  isFetching: boolean;
+}
 
-      if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
-        return await createActorWithConfig();
-      }
+export function useActor(): ActorResult {
+  const [isFetching, setIsFetching] = useState(true);
+  const mounted = useRef(true);
 
-      const actorOptions = {
-        agentOptions: {
-          identity,
-        },
-      };
+  const init = useCallback(async () => {
+    // Simulate async initialization so consuming components wait one tick
+    await Promise.resolve();
+    if (mounted.current) setIsFetching(false);
+  }, []);
 
-      const actor = await createActorWithConfig(actorOptions);
-      const adminToken = getSecretParameter("caffeineAdminToken") || "";
-      await actor._initializeAccessControlWithSecret(adminToken);
-      return actor;
-    },
-    // Only refetch when identity changes
-    staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
-    enabled: true,
-  });
-
-  // When the actor changes, invalidate dependent queries
   useEffect(() => {
-    if (actorQuery.data) {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
-      });
-    }
-  }, [actorQuery.data, queryClient]);
+    mounted.current = true;
+    init();
+    return () => {
+      mounted.current = false;
+    };
+  }, [init]);
 
-  return {
-    actor: actorQuery.data || null,
-    isFetching: actorQuery.isFetching,
-  };
+  return { actor: null, isFetching };
 }

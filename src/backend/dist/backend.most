@@ -1,0 +1,135 @@
+// Version: 1.0.0
+type Balance__71751384 = Nat;
+type CoinTransaction__433624547 =
+  {amount : Int; createdAt : Int; reason : Text; txId : Text; userId : Text};
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type EmailLog__577630079 =
+  {
+    emailType : Text;
+    id : Nat;
+    orderId : Text;
+    recipient : Text;
+    status : Text;
+    subject : Text;
+    timestamp : Nat
+  };
+type GatepassEntry__706534639 =
+  {orderId : Text; timestamp : Nat; used : Bool};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type ProductReview__852024309 =
+  {
+    createdAt : Int;
+    isVerifiedPurchase : Bool;
+    photoUrls : [Text];
+    productId : Text;
+    rating : Nat;
+    reviewId : Text;
+    reviewText : Text;
+    status : ReviewStatus__8880597;
+    userId : Text;
+    userName : Text
+  };
+type Product__853085059 =
+  {
+    category : Text;
+    description : Text;
+    name : Text;
+    price : Nat;
+    seller : Principal
+  };
+type ReviewStatus__8880597 = {#approved; #pending; #rejected};
+type TXID__588962426 = Nat;
+type UserId__313180070 = Text;
+type UserProfile__491224006 = {email : Text; name : Text; role : Text};
+type UserRole__1054455867 = {#admin; #guest; #user};
+type WhatsAppLog__405315665 =
+  {
+    id : Nat;
+    messageType : Text;
+    orderId : Text;
+    recipient : Text;
+    status : Text;
+    timestamp : Nat
+  };
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable var aesKeyHex : Text;
+  stable b64Alpha : [Char];
+  stable coinTransactions :
+    {
+      var root : Node__46230540<TXID__588962426, CoinTransaction__433624547>;
+      var size : Nat__490723111
+    };
+  stable customerCoins :
+    {
+      var root : Node__46230540<UserId__313180070, Balance__71751384>;
+      var size : Nat__490723111
+    };
+  stable var emailLogCounter : Nat;
+  stable emailLogs :
+    {
+      var root : Node__46230540<Nat, EmailLog__577630079>;
+      var size : Nat__490723111
+    };
+  stable var gatepassNonce : Nat;
+  stable gatepassTokens :
+    {
+      var root : Node__46230540<Text, GatepassEntry__706534639>;
+      var size : Nat__490723111
+    };
+  stable var nextEmailLogId : Nat;
+  stable var nextProductId : Nat;
+  stable var nextTxId : Nat;
+  stable var nextWhatsAppLogId : Nat;
+  stable productReviewNonce :
+    {var root : Node__46230540<Text, Nat>; var size : Nat__490723111};
+  stable productReviews :
+    {
+      var root : Node__46230540<Text, ProductReview__852024309>;
+      var size : Nat__490723111
+    };
+  stable products :
+    {
+      var root : Node__46230540<Nat, Product__853085059>;
+      var size : Nat__490723111
+    };
+  stable var razorpayKeyId : Text;
+  stable var razorpayKeySecret : Text;
+  stable var smtpConfig :
+    {
+      enabled : Bool;
+      fromEmail : Text;
+      fromName : Text;
+      host : Text;
+      password : Text;
+      port : Text;
+      username : Text
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable var whatsAppConfig :
+    {accessToken : Text; enabled : Bool; phoneNumberId : Text; wabaId : Text};
+  stable whatsAppLogs :
+    {
+      var root : Node__46230540<Nat, WhatsAppLog__405315665>;
+      var size : Nat__490723111
+    }
+};

@@ -1,0 +1,192 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type WhatsAppLog = 
+ record {
+   id: nat;
+   messageType: text;
+   orderId: text;
+   recipient: text;
+   status: text;
+   timestamp: nat;
+ };
+type WhatsAppConfig = 
+ record {
+   accessToken: text;
+   enabled: bool;
+   phoneNumberId: text;
+   wabaId: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   email: text;
+   name: text;
+   role: text;
+ };
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type SmtpConfig = 
+ record {
+   enabled: bool;
+   fromEmail: text;
+   fromName: text;
+   host: text;
+   password: text;
+   port: text;
+   username: text;
+ };
+type ReviewStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+type ProductReview = 
+ record {
+   createdAt: int;
+   isVerifiedPurchase: bool;
+   photoUrls: vec text;
+   productId: text;
+   rating: nat;
+   reviewId: text;
+   reviewText: text;
+   status: ReviewStatus;
+   userId: text;
+   userName: text;
+ };
+type Product = 
+ record {
+   category: text;
+   description: text;
+   name: text;
+   price: nat;
+   seller: principal;
+ };
+type EmailLog = 
+ record {
+   emailType: text;
+   id: nat;
+   orderId: text;
+   recipient: text;
+   status: text;
+   subject: text;
+   timestamp: nat;
+ };
+type CoinTransaction = 
+ record {
+   amount: int;
+   createdAt: int;
+   reason: text;
+   txId: text;
+   userId: text;
+ };
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  awardCoins: (userId: text, amount: nat, reason: text) -> ();
+  createProduct: (name: text, price: nat, description: text, category:
+   text) -> (nat);
+  createRazorpayOrder: (amountPaise: nat, receipt: text) -> (text);
+  deleteProduct: (productId: nat) -> ();
+  generateGatepassToken: (orderId: text) -> (text);
+  getAesKey: () -> (text) query;
+  getAllProducts: () -> (vec Product) query;
+  getApprovedReviews: (productId: text) -> (vec ProductReview) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCoinHistory: (userId: text) -> (vec CoinTransaction) query;
+  getCustomerCoins: (userId: text) -> (nat) query;
+  getEmailLogs: () -> (vec EmailLog) query;
+  getPendingReviews: () -> (vec ProductReview) query;
+  getProduct: (productId: nat) -> (Product) query;
+  getProductAverageRating: (productId: text) ->
+   (record {
+      averageRating: float64;
+      reviewCount: nat;
+    }) query;
+  getProductsBySeller: (seller: principal) -> (vec Product) query;
+  getRazorpayKeyId: () -> (text) query;
+  getSmtpConfig: () -> (SmtpConfig) query;
+  getUserProfile: (userId: principal) -> (opt UserProfile) query;
+  getWhatsAppConfig: () -> (WhatsAppConfig) query;
+  getWhatsAppLogs: () -> (vec WhatsAppLog) query;
+  isAesKeyConfigured: () -> (bool) query;
+  isCallerAdmin: () -> (bool) query;
+  isRazorpayConfigured: () -> (bool) query;
+  logEmail: (emailType: text, recipient: text, subject: text, orderId:
+   text) -> (nat);
+  moderateReview: (reviewId: text, approve: bool) ->
+   (record {
+      coinsAwarded: nat;
+      newStatus: ReviewStatus;
+    });
+  redeemCoinsAtCheckout: (userId: text, orderId: text, coinsToRedeem: 
+   nat) -> (record {
+              coinsRedeemed: nat;
+              discountAmountPaise: nat;
+            });
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  sendWhatsAppMessage: (toPhone: text, messageType: text, orderId: text,
+   customerName: text) -> (text);
+  setAesKey: (keyHex: text) -> ();
+  setRazorpayKeys: (keyId: text, keySecret: text) -> ();
+  setSmtpConfig: (config: SmtpConfig) -> ();
+  setWhatsAppConfig: (config: WhatsAppConfig) -> ();
+  submitReview: (productId: text, userName: text, rating: nat, reviewText:
+   text, photoUrls: vec text, isVerifiedPurchase: bool) -> (text);
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  updateProduct: (productId: nat, product: Product) -> ();
+  verifyAndConsumeGatepassToken: (token: text) ->
+   (record {
+      message: text;
+      orderId: text;
+      success: bool;
+    });
+  verifyRazorpayPayment: (razorpayPaymentId: text, expectedOrderId: text) ->
+   (bool);
+}

@@ -11,6 +11,32 @@ export interface ProductVariant {
   stockThreshold?: number;
 }
 
+// Extended variant for 360°/bulk-upload variant matrix
+export interface ProductVariantExtended {
+  id: string;
+  parentSku: string;
+  skuId: string;
+  size?: string;
+  color?: string;
+  stockQuantity: number;
+  mrp: number;
+  salePrice: number;
+}
+
+export interface ProductMedia {
+  id: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  is360?: boolean;
+}
+
+export interface Product360Asset {
+  id: string;
+  frameIndex: number;
+  imageUrl: string;
+  isHighRes: boolean;
+}
+
 export interface Product {
   id: number;
   title: string;
@@ -46,6 +72,18 @@ export interface Product {
   warehousePincode?: string;
   discountedPrice?: number;
   stockThreshold?: number;
+  // Extended fields for 360° view and variant matrix (all optional — backward compatible)
+  skuId?: string;
+  brand?: string;
+  isVariable?: boolean;
+  parentSku?: string;
+  mrp?: number;
+  variantsExtended?: ProductVariantExtended[];
+  media?: ProductMedia[];
+  product360Assets?: Product360Asset[];
+  folder360Url?: string;
+  highRes360FolderUrl?: string;
+  frameCount360?: number;
 }
 
 export const PRODUCTS: Product[] = [

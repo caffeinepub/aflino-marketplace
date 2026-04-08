@@ -8,12 +8,12 @@ import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
-import AccessControl "authorization/access-control";
-import MixinAuthorization "authorization/MixinAuthorization";
-import HttpOutcalls "http-outcalls/outcall";
+import AccessControl "mo:caffeineai-authorization/access-control";
+import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
+import HttpOutcalls "mo:caffeineai-http-outcalls/outcall";
 
-import Storage "blob-storage/Storage";
-import MixinStorage "blob-storage/Mixin";
+import Storage "mo:caffeineai-object-storage/Storage";
+import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
 
 
 actor {
@@ -332,7 +332,7 @@ actor {
   };
 
   // ─────── STORAGE (for review photos + B2B documentation) ──────────
-  include MixinStorage();
+    include MixinObjectStorage();
 
   // ── Smtp Config ──────────────────────────────────────────────
   public type SmtpConfig = {
